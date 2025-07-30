@@ -101,6 +101,65 @@ public class WardenController {
         }
     }
 
+    @GetMapping("/students")
+    public ResponseEntity<?> getAllStudents() {
+        try {
+            List<Map<String, Object>> students = studentService.getAllStudents();
+            return ResponseEntity.ok(students);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching students: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to fetch students: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/students/{id}")
+    public ResponseEntity<?> getStudentById(@PathVariable String id) {
+        try {
+            Map<String, Object> student = studentService.getStudentById(id);
+            return ResponseEntity.ok(student);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to fetch student"));
+        }
+    }
+
+    @PutMapping("/students/{id}")
+    public ResponseEntity<?> updateStudent(@PathVariable String id, @RequestBody Map<String, Object> studentData) {
+        try {
+            Map<String, Object> updatedStudent = studentService.updateStudent(id, studentData);
+            return ResponseEntity.ok(updatedStudent);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to update student"));
+        }
+    }
+
+    @DeleteMapping("/students/{id}")
+    public ResponseEntity<?> deleteStudent(@PathVariable String id) {
+        try {
+            studentService.deleteStudent(id);
+            return ResponseEntity.ok(Map.of("message", "Student deleted successfully"));
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to delete student"));
+        }
+    }
+
     @PutMapping("/room-change-requests/{requestId}/approve")
     public ResponseEntity<?> approveRoomChangeRequest(@PathVariable String requestId) {
         try {

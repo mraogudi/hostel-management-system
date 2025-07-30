@@ -306,6 +306,159 @@ public class StudentService {
         return roomChangeRequestRepository.findAllByOrderByRequestedAtDesc();
     }
     
+    public List<Map<String, Object>> getAllStudents() {
+        System.out.println("=== getAllStudents ===");
+        
+        // Get all users with role "student"
+        List<User> students = userRepository.findByRole("student");
+        System.out.println("Found " + students.size() + " students");
+        
+        return students.stream().map(student -> {
+            Map<String, Object> studentMap = new HashMap<>();
+            studentMap.put("id", student.getId());
+            studentMap.put("full_name", student.getFullName());
+            studentMap.put("username", student.getUsername());
+            studentMap.put("email", student.getEmail());
+            studentMap.put("phone", student.getPhone());
+            studentMap.put("date_of_birth", student.getDateOfBirth());
+            studentMap.put("gender", student.getGender());
+            studentMap.put("aadhaar_id", student.getAadhaarId());
+            studentMap.put("roll_no", student.getRollNo());
+            studentMap.put("stream", student.getStream());
+            studentMap.put("branch", student.getBranch());
+            studentMap.put("created_at", student.getCreatedAt());
+            studentMap.put("first_login", student.getFirstLogin());
+            
+            // Get room assignment information
+            Optional<Bed> assignedBed = bedRepository.findByStudentId(student.getId());
+            if (assignedBed.isPresent()) {
+                Optional<Room> room = roomRepository.findById(assignedBed.get().getRoomId());
+                if (room.isPresent()) {
+                    studentMap.put("room_id", room.get().getId());
+                    studentMap.put("room_number", room.get().getRoomNumber());
+                    studentMap.put("bed_number", assignedBed.get().getBedNumber());
+                } else {
+                    studentMap.put("room_id", null);
+                    studentMap.put("room_number", null);
+                    studentMap.put("bed_number", null);
+                }
+            } else {
+                studentMap.put("room_id", null);
+                studentMap.put("room_number", null);
+                studentMap.put("bed_number", null);
+            }
+            
+            return studentMap;
+        }).collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getStudentById(String id) {
+        System.out.println("=== getStudentById: " + id + " ===");
+        
+        Optional<User> studentOptional = userRepository.findById(id);
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found");
+        }
+        
+        User student = studentOptional.get();
+        if (!"student".equals(student.getRole())) {
+            throw new RuntimeException("User is not a student");
+        }
+        
+        Map<String, Object> studentMap = new HashMap<>();
+        studentMap.put("id", student.getId());
+        studentMap.put("full_name", student.getFullName());
+        studentMap.put("username", student.getUsername());
+        studentMap.put("email", student.getEmail());
+        studentMap.put("phone", student.getPhone());
+        studentMap.put("date_of_birth", student.getDateOfBirth());
+        studentMap.put("gender", student.getGender());
+        studentMap.put("aadhaar_id", student.getAadhaarId());
+        studentMap.put("roll_no", student.getRollNo());
+        studentMap.put("stream", student.getStream());
+        studentMap.put("branch", student.getBranch());
+        studentMap.put("created_at", student.getCreatedAt());
+        studentMap.put("first_login", student.getFirstLogin());
+        
+        return studentMap;
+    }
+
+    public Map<String, Object> updateStudent(String id, Map<String, Object> studentData) {
+        System.out.println("=== updateStudent: " + id + " ===");
+        
+        Optional<User> studentOptional = userRepository.findById(id);
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found");
+        }
+        
+        User student = studentOptional.get();
+        if (!"student".equals(student.getRole())) {
+            throw new RuntimeException("User is not a student");
+        }
+        
+        // Update fields if provided
+        if (studentData.containsKey("full_name")) {
+            student.setFullName((String) studentData.get("full_name"));
+        }
+        if (studentData.containsKey("email")) {
+            student.setEmail((String) studentData.get("email"));
+        }
+        if (studentData.containsKey("phone")) {
+            String phone = (String) studentData.get("phone");
+            // Validate phone number
+            if (phone != null && !phone.matches("^[6-9][0-9]{9}$")) {
+                throw new RuntimeException("Invalid phone number format");
+            }
+            student.setPhone(phone);
+        }
+        if (studentData.containsKey("stream")) {
+            student.setStream((String) studentData.get("stream"));
+        }
+        if (studentData.containsKey("branch")) {
+            student.setBranch((String) studentData.get("branch"));
+        }
+        
+        User updatedStudent = userRepository.save(student);
+        System.out.println("Student updated successfully");
+        
+        return getStudentById(updatedStudent.getId());
+    }
+
+    public void deleteStudent(String id) {
+        System.out.println("=== deleteStudent: " + id + " ===");
+        
+        Optional<User> studentOptional = userRepository.findById(id);
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found");
+        }
+        
+        User student = studentOptional.get();
+        if (!"student".equals(student.getRole())) {
+            throw new RuntimeException("User is not a student");
+        }
+        
+        // Remove student from any assigned bed
+        Optional<Bed> assignedBed = bedRepository.findByStudentId(id);
+        if (assignedBed.isPresent()) {
+            Bed bed = assignedBed.get();
+            bed.setStudentId(null);
+            bed.setStatus("available");
+            bedRepository.save(bed);
+            System.out.println("Student removed from bed " + bed.getBedNumber());
+        }
+        
+        // Delete any room change requests
+        List<RoomChangeRequest> requests = roomChangeRequestRepository.findByStudentId(id);
+        if (!requests.isEmpty()) {
+            roomChangeRequestRepository.deleteAll(requests);
+            System.out.println("Deleted " + requests.size() + " room change requests");
+        }
+        
+        // Delete the student
+        userRepository.delete(student);
+        System.out.println("Student deleted successfully");
+    }
+    
     private void validateStudentRequest(CreateStudentRequest request) {
         // Check if username (roll number) already exists
         if (userRepository.existsByUsername(request.getRollNo())) {

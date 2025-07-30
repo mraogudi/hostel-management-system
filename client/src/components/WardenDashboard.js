@@ -54,22 +54,73 @@ const WardenDashboard = () => {
     fetchData();
   }, []);
 
+  // Additional useEffect to fetch students when students tab is activated
+  useEffect(() => {
+    if (activeTab === 'students' && students.length === 0) {
+      console.log('Students tab activated, fetching students...');
+      fetchStudentsData();
+    }
+  }, [activeTab]);
+
+  const fetchStudentsData = async () => {
+    console.log('Fetching students data specifically...');
+    const studentsResult = await apiCall('GET', '/api/warden/students');
+    console.log('Students API response:', studentsResult);
+    
+    if (studentsResult.success) {
+      setStudents(studentsResult.data);
+      console.log('Students data loaded:', studentsResult.data);
+    } else {
+      console.error('Failed to fetch students:', studentsResult.error);
+      setMessage(`Error fetching students: ${studentsResult.error}`);
+    }
+  };
+
   const fetchData = async () => {
+    console.log('=== fetchData called ===');
     setLoading(true);
     
-    // Fetch rooms
-    const roomsResult = await apiCall('GET', '/api/rooms');
-    if (roomsResult.success) {
-      setRooms(roomsResult.data);
-    }
+    try {
+      // Fetch rooms
+      console.log('Fetching rooms...');
+      const roomsResult = await apiCall('GET', '/api/rooms');
+      if (roomsResult.success) {
+        setRooms(roomsResult.data);
+        console.log('Rooms fetched:', roomsResult.data.length, 'rooms');
+      } else {
+        console.error('Failed to fetch rooms:', roomsResult.error);
+      }
 
-    // Fetch room change requests
-    const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
-    if (requestsResult.success) {
-      setRoomChangeRequests(requestsResult.data);
-    }
+      // Fetch room change requests
+      console.log('Fetching room change requests...');
+      const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
+      if (requestsResult.success) {
+        setRoomChangeRequests(requestsResult.data);
+        console.log('Room change requests fetched:', requestsResult.data.length, 'requests');
+      } else {
+        console.error('Failed to fetch room change requests:', requestsResult.error);
+      }
 
+      // Fetch students list
+      console.log('Fetching students...');
+      const studentsResult = await apiCall('GET', '/api/warden/students');
+      console.log('Students API response:', studentsResult);
+      
+      if (studentsResult.success) {
+        setStudents(studentsResult.data);
+        console.log('Students fetched successfully:', studentsResult.data.length, 'students');
+        console.log('Sample student data:', studentsResult.data[0]);
+      } else {
+        console.error('Failed to fetch students:', studentsResult.error);
+        setMessage(`Error fetching students: ${studentsResult.error}`);
+      }
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      setMessage('Error loading dashboard data');
+    }
+    
     setLoading(false);
+    console.log('=== fetchData completed ===');
   };
 
   const handleCreateStudent = async (e) => {
@@ -268,6 +319,74 @@ Please share these credentials with the student.`);
     setConfirmAction({ type: '', request: null });
   };
 
+  // Student management functions
+  const handleEditStudent = (student) => {
+    setEditingStudent({ ...student });
+    setShowEditModal(true);
+  };
+
+  const handleViewStudent = (student) => {
+    setSelectedStudent(student);
+    setShowStudentModal(true);
+  };
+
+  const handleCloseStudentModal = () => {
+    setShowStudentModal(false);
+    setSelectedStudent(null);
+  };
+
+  const handleDeleteConfirm = (student) => {
+    setDeleteConfirm(student);
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deleteConfirm) return;
+
+    setStudentsLoading(true);
+    
+    const result = await apiCall('DELETE', `/api/warden/students/${deleteConfirm.id}`);
+    
+    if (result.success) {
+      setMessage('Student deleted successfully!');
+      fetchData(); // Refresh data
+    } else {
+      setMessage(`Error: ${result.error}`);
+    }
+    
+    setDeleteConfirm(null);
+    setStudentsLoading(false);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    
+    setStudentsLoading(true);
+    
+    const result = await apiCall('PUT', `/api/warden/students/${editingStudent.id}`, editingStudent);
+    
+    if (result.success) {
+      setMessage('Student updated successfully!');
+      setShowEditModal(false);
+      setEditingStudent(null);
+      fetchData(); // Refresh data
+    } else {
+      setMessage(`Error: ${result.error}`);
+    }
+    
+    setStudentsLoading(false);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingStudent(null);
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm(null);
+  };
+
   if (loading) {
     return <div className="loading">Loading dashboard...</div>;
   }
@@ -295,28 +414,28 @@ Please share these credentials with the student.`);
             Overview
           </button>
           <button 
+            className={`nav-button ${activeTab === 'create' ? 'active' : ''}`}
+            onClick={() => setActiveTab('create')}
+          >
+            Add Student
+          </button>
+          <button 
             className={`nav-button ${activeTab === 'students' ? 'active' : ''}`}
             onClick={() => setActiveTab('students')}
           >
-            Create Student
-          </button>
-          <button 
-            className={`nav-button ${activeTab === 'rooms' ? 'active' : ''}`}
-            onClick={() => setActiveTab('rooms')}
-          >
-            Manage Rooms
+            Students
           </button>
           <button 
             className={`nav-button ${activeTab === 'assign' ? 'active' : ''}`}
             onClick={() => setActiveTab('assign')}
           >
-            Assign Rooms
+            Assign Room
           </button>
           <button 
             className={`nav-button ${activeTab === 'requests' ? 'active' : ''}`}
             onClick={() => setActiveTab('requests')}
           >
-            Change Requests
+            Requests
           </button>
         </nav>
 
@@ -365,8 +484,8 @@ Please share these credentials with the student.`);
             </div>
           )}
 
-          {activeTab === 'students' && (
-            <div className="students-section">
+          {activeTab === 'create' && (
+            <div className="create-student-section">
               <h2>Create Student Account</h2>
               <form onSubmit={handleCreateStudent} className="student-form">
                 
@@ -582,50 +701,72 @@ Please share these credentials with the student.`);
             </div>
           )}
 
-          {activeTab === 'rooms' && (
-            <div className="rooms-section">
-              <h2>Room Management</h2>
-              <div className="rooms-grid">
-                {rooms.map(room => (
-                  <div key={room.id} className="room-card">
-                    <div className="room-header">
-                      <h3>Room {room.room_number}</h3>
-                      <span className="floor-badge">Floor {room.floor}</span>
-                    </div>
-                    <div className="room-info">
-                      <p><strong>Capacity:</strong> {room.capacity} beds</p>
-                      <p><strong>Occupied:</strong> {room.occupied_beds} beds</p>
-                      <p><strong>Available:</strong> {room.available_beds} beds</p>
-                    </div>
-                    <button 
-                      onClick={() => handleRoomDetails(room.id)}
-                      className="details-button"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                ))}
+          {activeTab === 'students' && (
+            <div className="students-list-section">
+              <h2>Students List</h2>
+              
+              <div className="students-summary">
+                <p>Total Students: <strong>{students.length}</strong></p>
               </div>
 
-              {selectedRoom && (
-                <div className="room-details-modal">
-                  <div className="modal-content">
-                    <h3>Room {selectedRoom.room_number} Details</h3>
-                    <div className="beds-info">
-                      <h4>Bed Assignment:</h4>
-                      {selectedRoom.beds?.map(bed => (
-                        <div key={bed.id} className="bed-info">
-                          <span>Bed {bed.bed_number}: </span>
-                          <span className={bed.status}>
-                            {bed.status === 'occupied' ? `${bed.student_name}` : bed.status}
-                          </span>
-                        </div>
+              {students.length === 0 ? (
+                <div className="no-students">
+                  <p>No students found. Create a student account first.</p>
+                </div>
+              ) : (
+                <div className="students-table-container">
+                  <table className="students-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Roll No</th>
+                        <th>Phone</th>
+                        <th>Date of Birth</th>
+                        <th>Stream</th>
+                        <th>Room</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {students.map(student => (
+                        <tr key={student.id}>
+                          <td className="student-name">{student.full_name}</td>
+                          <td className="roll-no">{student.roll_no}</td>
+                          <td className="phone">{student.phone}</td>
+                          <td className="dob">
+                            {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="stream">{student.stream}</td>
+                          <td className="room">
+                            {student.room_number ? `Room ${student.room_number}` : 'Not Assigned'}
+                          </td>
+                                                     <td className="actions">
+                             <button
+                               className="action-btn view-btn"
+                               onClick={() => handleViewStudent(student)}
+                               title="View Details"
+                             >
+                               👁️
+                             </button>
+                             <button
+                               className="action-btn edit-btn"
+                               onClick={() => handleEditStudent(student)}
+                               title="Edit Student"
+                             >
+                               ✏️
+                             </button>
+                             <button
+                               className="action-btn delete-btn"
+                               onClick={() => handleDeleteConfirm(student)}
+                               title="Delete Student"
+                             >
+                               🗑️
+                             </button>
+                           </td>
+                        </tr>
                       ))}
-                    </div>
-                    <button onClick={() => setSelectedRoom(null)} className="close-button">
-                      Close
-                    </button>
-                  </div>
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -789,6 +930,272 @@ Please share these credentials with the student.`);
                 onClick={confirmRequestAction}
               >
                 {confirmAction.type === 'approve' ? 'Approve Request' : 'Reject Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+             {/* View Student Details Modal */}
+       {showStudentModal && selectedStudent && (
+         <div className="modal-overlay">
+           <div className="modal-content view-student-modal">
+             <div className="modal-header">
+               <h3>Student Details</h3>
+               <button 
+                 className="close-btn"
+                 onClick={handleCloseStudentModal}
+                 title="Close"
+               >
+                 ✖️
+               </button>
+             </div>
+             
+             <div className="student-details-container">
+               {/* Personal Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">📋 Personal Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Full Name:</span>
+                     <span className="value">{selectedStudent.full_name}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Date of Birth:</span>
+                     <span className="value">
+                       {selectedStudent.date_of_birth 
+                         ? new Date(selectedStudent.date_of_birth).toLocaleDateString() 
+                         : 'N/A'}
+                     </span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Gender:</span>
+                     <span className="value">{selectedStudent.gender || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Aadhaar ID:</span>
+                     <span className="value">{selectedStudent.aadhaar_id || 'N/A'}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Contact Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">📞 Contact Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Email:</span>
+                     <span className="value">{selectedStudent.email || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Phone:</span>
+                     <span className="value">{selectedStudent.phone}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Academic Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">🎓 Academic Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Roll Number:</span>
+                     <span className="value roll-highlight">{selectedStudent.roll_no}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Username:</span>
+                     <span className="value">{selectedStudent.username}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Stream:</span>
+                     <span className="value">{selectedStudent.stream}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Branch:</span>
+                     <span className="value">{selectedStudent.branch}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Room Assignment Section */}
+               <div className="details-section">
+                 <h4 className="section-title">🏠 Room Assignment</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Room:</span>
+                     <span className={`value ${selectedStudent.room_number ? 'room-assigned' : 'room-unassigned'}`}>
+                       {selectedStudent.room_number ? `Room ${selectedStudent.room_number}` : 'Not Assigned'}
+                     </span>
+                   </div>
+                   {selectedStudent.bed_number && (
+                     <div className="detail-item">
+                       <span className="label">Bed Number:</span>
+                       <span className="value">Bed {selectedStudent.bed_number}</span>
+                     </div>
+                   )}
+                 </div>
+               </div>
+
+               {/* Account Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">⚙️ Account Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Account Created:</span>
+                     <span className="value">
+                       {selectedStudent.created_at 
+                         ? new Date(selectedStudent.created_at).toLocaleString() 
+                         : 'N/A'}
+                     </span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">First Login Status:</span>
+                     <span className={`value ${selectedStudent.first_login ? 'first-login-pending' : 'first-login-completed'}`}>
+                       {selectedStudent.first_login ? 'Password Change Required' : 'Completed'}
+                     </span>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             <div className="modal-actions">
+               <button 
+                 className="confirm-button approve"
+                 onClick={handleCloseStudentModal}
+               >
+                 Close
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+
+       {/* Edit Student Modal */}
+       {showEditModal && editingStudent && (
+         <div className="modal-overlay">
+           <div className="modal-content edit-student-modal">
+             <h3>Edit Student</h3>
+            <form onSubmit={handleSaveEdit} className="edit-student-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="edit_full_name">Full Name</label>
+                  <input
+                    type="text"
+                    id="edit_full_name"
+                    value={editingStudent.full_name}
+                    onChange={(e) => setEditingStudent({
+                      ...editingStudent,
+                      full_name: e.target.value
+                    })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit_email">Email</label>
+                  <input
+                    type="email"
+                    id="edit_email"
+                    value={editingStudent.email}
+                    onChange={(e) => setEditingStudent({
+                      ...editingStudent,
+                      email: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="edit_phone">Phone</label>
+                  <input
+                    type="tel"
+                    id="edit_phone"
+                    value={editingStudent.phone}
+                    onChange={(e) => setEditingStudent({
+                      ...editingStudent,
+                      phone: e.target.value.replace(/\D/g, '').slice(0, 10)
+                    })}
+                    pattern="^[6-9][0-9]{9}$"
+                    maxLength="10"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit_stream">Stream</label>
+                  <select
+                    id="edit_stream"
+                    value={editingStudent.stream}
+                    onChange={(e) => setEditingStudent({
+                      ...editingStudent,
+                      stream: e.target.value
+                    })}
+                    required
+                  >
+                    <option value="">Select Stream</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Commerce">Commerce</option>
+                    <option value="Arts">Arts</option>
+                    <option value="Science">Science</option>
+                    <option value="Management">Management</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="edit_branch">Branch</label>
+                  <input
+                    type="text"
+                    id="edit_branch"
+                    value={editingStudent.branch}
+                    onChange={(e) => setEditingStudent({
+                      ...editingStudent,
+                      branch: e.target.value
+                    })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="cancel-button" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
+                <button type="submit" className="confirm-button approve" disabled={studentsLoading}>
+                  {studentsLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content confirmation-modal">
+            <h3>Confirm Delete</h3>
+            <p>
+              Are you sure you want to delete student <strong>{deleteConfirm.full_name}</strong>?
+            </p>
+            <div className="action-details">
+              <p><strong>Roll No:</strong> {deleteConfirm.roll_no}</p>
+              <p><strong>Stream:</strong> {deleteConfirm.stream}</p>
+              <p><strong>Branch:</strong> {deleteConfirm.branch}</p>
+              <p className="warning">⚠️ This action cannot be undone. The student will be removed from any assigned room.</p>
+            </div>
+            
+            <div className="modal-actions">
+              <button className="cancel-button" onClick={handleCancelDelete}>
+                Cancel
+              </button>
+              <button 
+                className="confirm-button reject" 
+                onClick={handleDeleteStudent}
+                disabled={studentsLoading}
+              >
+                {studentsLoading ? 'Deleting...' : 'Delete Student'}
               </button>
             </div>
           </div>
