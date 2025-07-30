@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 
 public class AssignRoomRequest {
     
-    @NotBlank(message = "Student ID is required")
-    private String studentId;
+    @NotBlank(message = "Student roll number is required")
+    private String studentId; // This will contain the roll number
     
     @NotBlank(message = "Room ID is required")
     private String roomId;
@@ -25,11 +25,11 @@ public class AssignRoomRequest {
     
     // Getters and Setters
     public String getStudentId() {
-        return studentId;
+        return studentId; // Returns roll number
     }
     
     public void setStudentId(String studentId) {
-        this.studentId = studentId;
+        this.studentId = studentId; // Sets roll number
     }
     
     public String getRoomId() {

@@ -47,6 +47,7 @@ public class WardenController {
     @PostMapping("/assign-room")
     public ResponseEntity<?> assignRoom(@Valid @RequestBody AssignRoomRequest request) {
         try {
+            // Note: request.getStudentId() actually contains the roll number
             studentService.assignRoom(request.getStudentId(), request.getRoomId(), request.getBedNumber());
             return ResponseEntity.ok(Map.of("message", "Room assigned successfully"));
             

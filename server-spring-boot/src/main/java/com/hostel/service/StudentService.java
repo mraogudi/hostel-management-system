@@ -90,7 +90,24 @@ public class StudentService {
         return response;
     }
     
-    public void assignRoom(String studentId, String roomId, Integer bedNumber) {
+    public void assignRoom(String rollNumber, String roomId, Integer bedNumber) {
+        // First, find the student by roll number
+        Optional<User> studentOptional = userRepository.findByRollNo(rollNumber);
+        
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found with roll number: " + rollNumber);
+        }
+        
+        User student = studentOptional.get();
+        String studentId = student.getId(); // Get the actual MongoDB ObjectId
+        
+        // Check if student is already assigned to a room
+        Optional<Bed> existingBedOptional = bedRepository.findByStudentId(studentId);
+        if (existingBedOptional.isPresent()) {
+            throw new RuntimeException("Student " + rollNumber + " is already assigned to a room");
+        }
+        
+        // Find the requested bed
         Optional<Bed> bedOptional = bedRepository.findByRoomIdAndBedNumber(roomId, bedNumber);
         
         if (bedOptional.isEmpty() || !"available".equals(bedOptional.get().getStatus())) {
@@ -98,7 +115,7 @@ public class StudentService {
         }
         
         Bed bed = bedOptional.get();
-        bed.setStudentId(studentId);
+        bed.setStudentId(studentId); // Use the actual student ObjectId
         bed.setStatus("occupied");
         bedRepository.save(bed);
         

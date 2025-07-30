@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import './WardenDashboard.css';
 
@@ -25,10 +26,13 @@ const WardenDashboard = () => {
   });
   
   const [roomAssignment, setRoomAssignment] = useState({
-    student_id: '',
-    room_id: '',
-    bed_number: ''
+    studentId: '',
+    roomId: '',
+    bedNumber: ''
   });
+  
+  const [availableBeds, setAvailableBeds] = useState([]);
+  const [bedsLoading, setBedsLoading] = useState(false);
   
   const [selectedRoom, setSelectedRoom] = useState(null);
 
@@ -109,7 +113,7 @@ Please share these credentials with the student.`);
     
     if (result.success) {
       setMessage('Room assigned successfully!');
-      setRoomAssignment({ student_id: '', room_id: '', bed_number: '' });
+      setRoomAssignment({ studentId: '', roomId: '', bedNumber: '' });
       fetchData(); // Refresh data
     } else {
       setMessage(`Error: ${result.error}`);
@@ -125,15 +129,84 @@ Please share these credentials with the student.`);
     }
   };
 
-  const getAvailableBeds = (roomId) => {
-    const room = rooms.find(r => r.id === parseInt(roomId));
-    if (!room) return [];
+  const getAvailableBeds = async (roomId) => {
+    if (!roomId) return [];
     
-    const beds = [];
-    for (let i = 1; i <= room.capacity; i++) {
-      beds.push(i);
+    try {
+      console.log('=== getAvailableBeds called ===');
+      console.log('Room ID:', roomId);
+      
+      // Fetch detailed room information including bed availability
+      const result = await apiCall('GET', `/api/rooms/${roomId}`);
+      console.log('API response success:', result.success);
+      console.log('Full API response:', JSON.stringify(result, null, 2));
+      
+      if (result.success && result.data) {
+        const roomData = result.data;
+        console.log('Room number:', roomData.room_number);
+        console.log('Room capacity:', roomData.capacity);
+        console.log('Beds data type:', typeof roomData.beds);
+        console.log('Beds is array:', Array.isArray(roomData.beds));
+        console.log('Beds length:', roomData.beds ? roomData.beds.length : 'undefined');
+        
+        if (roomData.beds && Array.isArray(roomData.beds)) {
+          console.log('Processing beds array:');
+          roomData.beds.forEach((bed, index) => {
+            console.log(`  Bed ${index + 1}:`, {
+              bed_number: bed.bed_number,
+              status: bed.status,
+              student_id: bed.student_id
+            });
+          });
+          
+          // Return only available bed numbers
+          const availableBeds = roomData.beds
+            .filter(bed => {
+              const isAvailable = bed.status === 'available';
+              console.log(`  Bed ${bed.bed_number}: ${bed.status} -> ${isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
+              return isAvailable;
+            })
+            .map(bed => bed.bed_number)
+            .sort((a, b) => a - b);
+          
+          console.log('Final available beds array:', availableBeds);
+          console.log('=== getAvailableBeds completed ===');
+          return availableBeds;
+        } else {
+          console.log('ERROR: No valid beds array found');
+          console.log('beds value:', roomData.beds);
+          return [];
+        }
+      } else {
+        console.log('ERROR: API call failed or no data');
+        console.log('Result success:', result.success);
+        console.log('Result data:', result.data);
+        console.log('Result error:', result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error('EXCEPTION in getAvailableBeds:', error);
+      return [];
     }
-    return beds;
+  };
+
+  // Handle room selection and fetch available beds
+  const handleRoomSelection = async (roomId) => {
+    setRoomAssignment({
+      ...roomAssignment,
+      roomId: roomId,
+      bedNumber: ''
+    });
+
+    if (roomId) {
+      setBedsLoading(true);
+      const beds = await getAvailableBeds(roomId);
+      setAvailableBeds(beds);
+      setBedsLoading(false);
+    } else {
+      setAvailableBeds([]);
+      setBedsLoading(false);
+    }
   };
 
   const getRoomStatistics = () => {
@@ -513,30 +586,27 @@ Please share these credentials with the student.`);
               <h2>Assign Room to Student</h2>
               <form onSubmit={handleRoomAssignment} className="assign-form">
                 <div className="form-group">
-                  <label htmlFor="student_id">Student ID</label>
+                  <label htmlFor="student_id">Student Roll Number</label>
                   <input
-                    type="number"
+                    type="text"
                     id="student_id"
-                    value={roomAssignment.student_id}
+                    value={roomAssignment.studentId}
                     onChange={(e) => setRoomAssignment({
                       ...roomAssignment,
-                      student_id: e.target.value
+                      studentId: e.target.value
                     })}
                     required
-                    placeholder="Enter student ID"
+                    placeholder="Enter student roll number (e.g., CS2021001)"
                   />
+                  <small className="field-note">Enter the student's roll number</small>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="room_select">Select Room</label>
                   <select
                     id="room_select"
-                    value={roomAssignment.room_id}
-                    onChange={(e) => setRoomAssignment({
-                      ...roomAssignment,
-                      room_id: e.target.value,
-                      bed_number: ''
-                    })}
+                    value={roomAssignment.roomId}
+                    onChange={(e) => handleRoomSelection(e.target.value)}
                     required
                   >
                     <option value="">Choose a room...</option>
@@ -551,25 +621,35 @@ Please share these credentials with the student.`);
                   </select>
                 </div>
 
-                {roomAssignment.room_id && (
+                {roomAssignment.roomId && (
                   <div className="form-group">
                     <label htmlFor="bed_select">Select Bed</label>
                     <select
                       id="bed_select"
-                      value={roomAssignment.bed_number}
+                      value={roomAssignment.bedNumber}
                       onChange={(e) => setRoomAssignment({
                         ...roomAssignment,
-                        bed_number: e.target.value
+                        bedNumber: e.target.value
                       })}
                       required
+                      disabled={bedsLoading}
                     >
-                      <option value="">Choose a bed...</option>
-                      {getAvailableBeds(roomAssignment.room_id).map(bedNumber => (
-                        <option key={bedNumber} value={bedNumber}>
-                          Bed {bedNumber}
-                        </option>
-                      ))}
+                      <option value="">
+                        {bedsLoading ? "Loading beds..." : "Choose a bed..."}
+                      </option>
+                      {!bedsLoading && availableBeds.length > 0 ? (
+                        availableBeds.map(bedNumber => (
+                          <option key={bedNumber} value={bedNumber}>
+                            Bed {bedNumber}
+                          </option>
+                        ))
+                      ) : !bedsLoading && availableBeds.length === 0 ? (
+                        <option value="" disabled>No available beds</option>
+                      ) : null}
                     </select>
+                    {!bedsLoading && availableBeds.length === 0 && roomAssignment.roomId && (
+                      <small className="field-note error">No available beds in this room</small>
+                    )}
                   </div>
                 )}
 

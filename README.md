@@ -264,8 +264,54 @@ The React frontend automatically connects to the Spring Boot backend through:
 - `GET /api/rooms` - Get all rooms with statistics
 - `GET /api/food-menu` - Get weekly food menu
 - `POST /api/warden/create-student` - Create new student account
-- `POST /api/warden/assign-room` - Assign room to student
+- `POST /api/warden/assign-room` - Assign room to student (uses roll number as student identifier)
 - `POST /api/student/room-change-request` - Submit room change request
+
+### Student Management (Warden Only)
+- `POST /api/warden/create-student` - Create new student
+- `GET /api/warden/students` - Get all students with room assignments
+- `GET /api/warden/students/{id}` - Get detailed student information
+- `PUT /api/warden/students/{id}` - Update student information
+- `DELETE /api/warden/students/{id}` - Delete student (handles room cleanup)
+- `POST /api/warden/students/{id}/reset-password` - Reset student password
+- `POST /api/warden/assign-room` - Assign room to student (uses roll number as student identifier)
+- `GET /api/warden/room-change-requests` - Get all room change requests
+
+## 📋 **API Endpoints**
+
+### Authentication Endpoints
+- `POST /api/login` - User authentication
+- `GET /api/profile` - Get user profile
+- `POST /api/change-password` - Change user password (first-time login requirement)
+
+### Student Management (Warden Only)
+- `POST /api/warden/create-student` - Create new student
+- `GET /api/warden/students` - Get all students with room assignments
+- `GET /api/warden/students/{id}` - Get detailed student information
+- `PUT /api/warden/students/{id}` - Update student information
+- `DELETE /api/warden/students/{id}` - Delete student (handles room cleanup)
+- `POST /api/warden/students/{id}/reset-password` - Reset student password
+- `POST /api/warden/assign-room` - Assign room to student (uses roll number as student identifier)
+- `GET /api/warden/room-change-requests` - Get all room change requests
+
+### Student Operations
+- `GET /api/student/my-room` - Get current room assignment and roommates
+- `POST /api/student/room-change-request` - Submit room change request
+
+### General Endpoints
+- `GET /api/rooms` - Get all rooms with occupancy statistics
+- `GET /api/rooms/{id}` - Get detailed room information with bed assignments
+- `GET /api/food-menu` - Get weekly food menu
+
+#### **Room Assignment API Format:**
+```json
+POST /api/warden/assign-room
+{
+  "studentId": "CS2021001",    // Student's roll number (not MongoDB ObjectId)
+  "roomId": "room_object_id",  // Room's MongoDB ObjectId  
+  "bedNumber": 1               // Bed number within the room
+}
+```
 
 ## 🔧 Configuration
 
