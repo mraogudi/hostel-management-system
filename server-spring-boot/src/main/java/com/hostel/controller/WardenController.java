@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -135,20 +136,20 @@ public class WardenController {
                     roomRepository.findById(request.getCurrentRoomId()).orElse(null) : null;
                 Room requestedRoom = roomRepository.findById(request.getRequestedRoomId()).orElse(null);
                 
-                return Map.of(
-                    "id", request.getId(),
-                    "student_id", request.getStudentId(),
-                    "student_name", student != null ? student.getFullName() : "Unknown",
-                    "current_room_id", request.getCurrentRoomId() != null ? request.getCurrentRoomId() : "",
-                    "current_room", currentRoom != null ? currentRoom.getRoomNumber() : null,
-                    "requested_room_id", request.getRequestedRoomId(),
-                    "requested_room", requestedRoom != null ? requestedRoom.getRoomNumber() : "Unknown",
-                    "reason", request.getReason(),
-                    "status", request.getStatus(),
-                    "requested_at", request.getRequestedAt(),
-                    "processed_at", request.getProcessedAt(),
-                    "processed_by", request.getProcessedBy()
-                );
+                Map<String, Object> requestMap = new HashMap<>();
+                requestMap.put("id", request.getId());
+                requestMap.put("student_id", request.getStudentId());
+                requestMap.put("student_name", student != null ? student.getFullName() : "Unknown");
+                requestMap.put("current_room_id", request.getCurrentRoomId() != null ? request.getCurrentRoomId() : "");
+                requestMap.put("current_room", currentRoom != null ? currentRoom.getRoomNumber() : null);
+                requestMap.put("requested_room_id", request.getRequestedRoomId());
+                requestMap.put("requested_room", requestedRoom != null ? requestedRoom.getRoomNumber() : "Unknown");
+                requestMap.put("reason", request.getReason());
+                requestMap.put("status", request.getStatus());
+                requestMap.put("requested_at", request.getRequestedAt());
+                requestMap.put("processed_at", request.getProcessedAt());
+                requestMap.put("processed_by", request.getProcessedBy());
+                return requestMap;
             }).collect(Collectors.toList());
             
             return ResponseEntity.ok(requestsWithDetails);

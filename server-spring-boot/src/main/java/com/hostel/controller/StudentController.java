@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -103,7 +104,9 @@ public class StudentController {
                 .filter(bed -> bed.getStudentId() != null && !bed.getStudentId().equals(userId))
                 .map(bed -> {
                     User student = userRepository.findById(bed.getStudentId()).orElse(null);
-                    return Map.of("full_name", student != null ? student.getFullName() : "Unknown");
+                    Map<String, Object> roommateMap = new HashMap<>();
+                    roommateMap.put("full_name", student != null ? student.getFullName() : "Unknown");
+                    return roommateMap;
                 })
                 .collect(Collectors.toList());
             

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,16 +39,16 @@ public class RoomController {
                 long occupiedBeds = bedRepository.countByRoomIdAndStatus(room.getId(), "occupied");
                 long availableBeds = bedRepository.countByRoomIdAndStatus(room.getId(), "available");
                 
-                return Map.of(
-                    "id", room.getId(),
-                    "room_number", room.getRoomNumber(),
-                    "floor", room.getFloor(),
-                    "capacity", room.getCapacity(),
-                    "room_type", room.getRoomType(),
-                    "occupied_beds", occupiedBeds,
-                    "available_beds", availableBeds,
-                    "created_at", room.getCreatedAt()
-                );
+                Map<String, Object> roomMap = new HashMap<>();
+                roomMap.put("id", room.getId());
+                roomMap.put("room_number", room.getRoomNumber());
+                roomMap.put("floor", room.getFloor());
+                roomMap.put("capacity", room.getCapacity());
+                roomMap.put("room_type", room.getRoomType());
+                roomMap.put("occupied_beds", occupiedBeds);
+                roomMap.put("available_beds", availableBeds);
+                roomMap.put("created_at", room.getCreatedAt());
+                return roomMap;
             }).collect(Collectors.toList());
             
             return ResponseEntity.ok(roomsWithStats);
@@ -75,13 +76,13 @@ public class RoomController {
                 User student = bed.getStudentId() != null ? 
                     userRepository.findById(bed.getStudentId()).orElse(null) : null;
                 
-                return Map.of(
-                    "id", bed.getId(),
-                    "bed_number", bed.getBedNumber(),
-                    "status", bed.getStatus(),
-                    "student_id", bed.getStudentId() != null ? bed.getStudentId() : "",
-                    "student_name", student != null ? student.getFullName() : null
-                );
+                Map<String, Object> bedMap = new HashMap<>();
+                bedMap.put("id", bed.getId());
+                bedMap.put("bed_number", bed.getBedNumber());
+                bedMap.put("status", bed.getStatus());
+                bedMap.put("student_id", bed.getStudentId() != null ? bed.getStudentId() : "");
+                bedMap.put("student_name", student != null ? student.getFullName() : null);
+                return bedMap;
             }).collect(Collectors.toList());
             
             Map<String, Object> roomDetails = Map.of(
