@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,18 +130,136 @@ public class StudentService {
     }
     
     public void submitRoomChangeRequest(String userId, RoomChangeRequestDto requestDto) {
+        System.out.println("=== submitRoomChangeRequest ===");
+        System.out.println("User ID: " + userId);
+        System.out.println("Requested Room ID: " + requestDto.getRequestedRoomId());
+        System.out.println("Requested Bed Number: " + requestDto.getRequestedBedNumber());
+        System.out.println("Reason: " + requestDto.getReason());
+        
         // Get current room of student
         Optional<Bed> currentBedOptional = bedRepository.findByStudentId(userId);
         String currentRoomId = currentBedOptional.map(Bed::getRoomId).orElse(null);
+        System.out.println("Current Room ID: " + currentRoomId);
+        
+        // Validate that the requested bed is available
+        Optional<Bed> requestedBedOptional = bedRepository.findByRoomIdAndBedNumber(
+            requestDto.getRequestedRoomId(), 
+            requestDto.getRequestedBedNumber()
+        );
+        
+        if (requestedBedOptional.isEmpty()) {
+            System.out.println("ERROR: Requested bed does not exist");
+            throw new RuntimeException("Requested bed does not exist");
+        }
+        
+        Bed requestedBed = requestedBedOptional.get();
+        System.out.println("Requested bed status: " + requestedBed.getStatus());
+        
+        if (!"available".equals(requestedBed.getStatus())) {
+            System.out.println("ERROR: Requested bed is not available");
+            throw new RuntimeException("Requested bed is not available");
+        }
         
         RoomChangeRequest roomChangeRequest = new RoomChangeRequest(
             userId,
             currentRoomId,
             requestDto.getRequestedRoomId(),
+            requestDto.getRequestedBedNumber(),
             requestDto.getReason()
         );
         
-        roomChangeRequestRepository.save(roomChangeRequest);
+        RoomChangeRequest savedRequest = roomChangeRequestRepository.save(roomChangeRequest);
+        System.out.println("Room change request saved with ID: " + savedRequest.getId());
+        System.out.println("=== End submitRoomChangeRequest ===");
+    }
+    
+    public void approveRoomChangeRequest(String requestId) {
+        System.out.println("=== approveRoomChangeRequest ===");
+        System.out.println("Request ID: " + requestId);
+        
+        // Find the room change request
+        Optional<RoomChangeRequest> requestOptional = roomChangeRequestRepository.findById(requestId);
+        if (requestOptional.isEmpty()) {
+            throw new RuntimeException("Room change request not found");
+        }
+        
+        RoomChangeRequest request = requestOptional.get();
+        System.out.println("Student ID: " + request.getStudentId());
+        System.out.println("Requested Room ID: " + request.getRequestedRoomId());
+        System.out.println("Requested Bed Number: " + request.getRequestedBedNumber());
+        
+        if (!"pending".equals(request.getStatus())) {
+            throw new RuntimeException("Request has already been processed");
+        }
+        
+        // Check if the requested bed is still available
+        Optional<Bed> requestedBedOptional = bedRepository.findByRoomIdAndBedNumber(
+            request.getRequestedRoomId(), 
+            request.getRequestedBedNumber()
+        );
+        
+        if (requestedBedOptional.isEmpty()) {
+            throw new RuntimeException("Requested bed no longer exists");
+        }
+        
+        Bed requestedBed = requestedBedOptional.get();
+        if (!"available".equals(requestedBed.getStatus())) {
+            throw new RuntimeException("Requested bed is no longer available");
+        }
+        
+        // Get student's current bed (if any)
+        Optional<Bed> currentBedOptional = bedRepository.findByStudentId(request.getStudentId());
+        
+        // Free up current bed if student has one
+        if (currentBedOptional.isPresent()) {
+            Bed currentBed = currentBedOptional.get();
+            System.out.println("Freeing current bed: Room " + currentBed.getRoomId() + ", Bed " + currentBed.getBedNumber());
+            currentBed.setStudentId(null);
+            currentBed.setStatus("available");
+            bedRepository.save(currentBed);
+        }
+        
+        // Assign the new bed to the student
+        System.out.println("Assigning new bed: Room " + requestedBed.getRoomId() + ", Bed " + requestedBed.getBedNumber());
+        requestedBed.setStudentId(request.getStudentId());
+        requestedBed.setStatus("occupied");
+        bedRepository.save(requestedBed);
+        
+        // Update the room change request status
+        request.setStatus("approved");
+        request.setProcessedAt(LocalDateTime.now());
+        request.setProcessedBy("warden"); // In a real system, this would be the current user's ID
+        roomChangeRequestRepository.save(request);
+        
+        System.out.println("Room change request approved successfully");
+        System.out.println("=== End approveRoomChangeRequest ===");
+    }
+    
+    public void rejectRoomChangeRequest(String requestId) {
+        System.out.println("=== rejectRoomChangeRequest ===");
+        System.out.println("Request ID: " + requestId);
+        
+        // Find the room change request
+        Optional<RoomChangeRequest> requestOptional = roomChangeRequestRepository.findById(requestId);
+        if (requestOptional.isEmpty()) {
+            throw new RuntimeException("Room change request not found");
+        }
+        
+        RoomChangeRequest request = requestOptional.get();
+        System.out.println("Student ID: " + request.getStudentId());
+        
+        if (!"pending".equals(request.getStatus())) {
+            throw new RuntimeException("Request has already been processed");
+        }
+        
+        // Update the room change request status
+        request.setStatus("rejected");
+        request.setProcessedAt(LocalDateTime.now());
+        request.setProcessedBy("warden"); // In a real system, this would be the current user's ID
+        roomChangeRequestRepository.save(request);
+        
+        System.out.println("Room change request rejected successfully");
+        System.out.println("=== End rejectRoomChangeRequest ===");
     }
     
     public Map<String, Object> getStudentRoom(String userId) {

@@ -1,6 +1,8 @@
 package com.hostel.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -11,32 +13,45 @@ public class RoomChangeRequest {
     @Id
     private String id;
     
+    @JsonProperty("student_id")
     private String studentId;
     
+    @JsonProperty("current_room_id")
     private String currentRoomId;
     
+    @JsonProperty("requested_room_id")
     private String requestedRoomId;
+    
+    @JsonProperty("requested_bed_number")
+    private Integer requestedBedNumber;
     
     private String reason;
     
     private String status; // "pending", "approved", "rejected"
     
+    @CreatedDate
+    @JsonProperty("requested_at")
     private LocalDateTime requestedAt;
     
+    @JsonProperty("processed_at")
     private LocalDateTime processedAt;
     
+    @JsonProperty("processed_by")
     private String processedBy;
     
     // Constructors
-    public RoomChangeRequest() {}
+    public RoomChangeRequest() {
+        this.status = "pending";
+        this.requestedAt = LocalDateTime.now();
+    }
     
-    public RoomChangeRequest(String studentId, String currentRoomId, String requestedRoomId, String reason) {
+    public RoomChangeRequest(String studentId, String currentRoomId, String requestedRoomId, Integer requestedBedNumber, String reason) {
+        this();
         this.studentId = studentId;
         this.currentRoomId = currentRoomId;
         this.requestedRoomId = requestedRoomId;
+        this.requestedBedNumber = requestedBedNumber;
         this.reason = reason;
-        this.status = "pending";
-        this.requestedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
@@ -70,6 +85,14 @@ public class RoomChangeRequest {
     
     public void setRequestedRoomId(String requestedRoomId) {
         this.requestedRoomId = requestedRoomId;
+    }
+    
+    public Integer getRequestedBedNumber() {
+        return requestedBedNumber;
+    }
+    
+    public void setRequestedBedNumber(Integer requestedBedNumber) {
+        this.requestedBedNumber = requestedBedNumber;
     }
     
     public String getReason() {

@@ -376,3 +376,29 @@ This project is built for educational purposes and hostel management automation.
 ---
 
 🚀 **Ready to go!** Start both servers and navigate to `http://localhost:3000` to access the application. 
+
+#### **Student Dashboard Features:**
+- **🏠 Room Information**: Complete room and roommate details
+- **🍽️ Food Menu**: Weekly meal schedules organized by day and meal type
+- **🔄 Room Change Requests**: Enhanced request system with:
+  - **📋 Current Room Display**: Shows current room details, bed assignment, and roommates
+  - **🛏️ Bed Selection**: Choose specific bed when requesting room change
+  - **✅ Real-time Validation**: Ensures requested beds are available
+  - **🎯 Smart Filtering**: Excludes current room from available options
+  - **💬 Detailed Reasons**: Text area for change justification
+
+#### **Warden Dashboard Features:**
+
+#### **Student Management:**
+- **📋 Students List**: View all students with key information (name, roll no, phone, DOB, room assignment)
+- **👁️ View Details**: Comprehensive student profile popup with all personal, contact, academic, and room information
+- **✏️ Edit Student**: Update student information with real-time validation
+- **🔑 Password Reset**: Generate new passwords for students (triggers first-time login flow)
+- **🗑️ Delete Student**: Remove students with confirmation (automatically handles room deallocation and cleanup)
+- **📊 Room Assignment Status**: See which students have rooms assigned and which don't
+
+#### **Room Change Management:**
+- **📋 Request Overview**: View all room change requests with detailed information
+- **🛏️ Bed-Specific Requests**: See exact bed numbers requested by students
+- **👤 Student Context**: Full student information and current room details
+- **⏰ Request Tracking**: Timestamps and processing status 

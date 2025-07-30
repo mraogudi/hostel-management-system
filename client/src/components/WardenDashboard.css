@@ -267,27 +267,28 @@
   font-size: 18px;
 }
 
+/* Status Badge Styles */
 .status-badge {
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 12px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 .status-badge.pending {
-  background: #fff3cd;
-  color: #856404;
+  background-color: #f39c12;
+  color: white;
 }
 
 .status-badge.approved {
-  background: #d4edda;
-  color: #155724;
+  background-color: #27ae60;
+  color: white;
 }
 
 .status-badge.rejected {
-  background: #f8d7da;
-  color: #721c24;
+  background-color: #e74c3c;
+  color: white;
 }
 
 .request-details p {
@@ -300,40 +301,147 @@
   color: #333;
 }
 
+/* Request Actions Styles */
 .request-actions {
   display: flex;
   gap: 10px;
   margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.approve-button,
+.reject-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
 }
 
 .approve-button {
-  background: #28a745;
+  background-color: #27ae60;
   color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
 }
 
-.approve-button:hover {
-  background: #218838;
+.approve-button:hover:not(:disabled) {
+  background-color: #219a52;
+  transform: translateY(-1px);
+}
+
+.approve-button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .reject-button {
-  background: #dc3545;
+  background-color: #e74c3c;
   color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
 }
 
-.reject-button:hover {
-  background: #c82333;
+.reject-button:hover:not(:disabled) {
+  background-color: #c0392b;
+  transform: translateY(-1px);
+}
+
+.reject-button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Confirmation Modal Styles */
+.confirmation-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.confirmation-modal h3 {
+  margin: 0 0 15px 0;
+  color: #2c3e50;
+  font-size: 1.3em;
+}
+
+.confirmation-modal p {
+  margin: 10px 0;
+  color: #34495e;
+  line-height: 1.5;
+}
+
+.action-details {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  margin: 15px 0;
+  border-left: 4px solid #3498db;
+}
+
+.action-details p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.action-details strong {
+  color: #2c3e50;
+  display: inline-block;
+  min-width: 80px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.cancel-button {
+  padding: 10px 20px;
+  border: 2px solid #bdc3c7;
+  background: white;
+  color: #7f8c8d;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-button:hover {
+  border-color: #95a5a6;
+  color: #34495e;
+}
+
+.confirm-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.confirm-button.approve {
+  background-color: #27ae60;
+}
+
+.confirm-button.approve:hover {
+  background-color: #219a52;
+}
+
+.confirm-button.reject {
+  background-color: #e74c3c;
+}
+
+.confirm-button.reject:hover {
+  background-color: #c0392b;
 }
 
 /* Form Section Styling */
@@ -593,4 +701,33 @@ select:disabled {
     color: #6c757d;
     cursor: not-allowed;
     opacity: 0.7;
+} 
+
+/* Responsive design for modals */
+@media (max-width: 768px) {
+  .confirmation-modal {
+    max-width: 95%;
+    margin: 20px;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .cancel-button,
+  .confirm-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .request-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .approve-button,
+  .reject-button {
+    width: 100%;
+  }
 } 

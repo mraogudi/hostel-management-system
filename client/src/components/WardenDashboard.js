@@ -34,6 +34,20 @@ const WardenDashboard = () => {
   const [availableBeds, setAvailableBeds] = useState([]);
   const [bedsLoading, setBedsLoading] = useState(false);
   
+  // Student Management states
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [passwordReset, setPasswordReset] = useState(null);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+
+  // Room change request states
+  const [processingRequest, setProcessingRequest] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState({ type: '', request: null });
+
   const [selectedRoom, setSelectedRoom] = useState(null);
 
   useEffect(() => {
@@ -216,6 +230,42 @@ Please share these credentials with the student.`);
     const occupiedBeds = rooms.reduce((sum, room) => sum + room.occupied_beds, 0);
     
     return { totalRooms, occupiedRooms, totalBeds, occupiedBeds };
+  };
+
+  // Handle room change request approval/rejection
+  const handleRequestAction = (request, action) => {
+    setConfirmAction({ type: action, request });
+    setShowConfirmModal(true);
+  };
+
+  const confirmRequestAction = async () => {
+    if (!confirmAction.request || !confirmAction.type) return;
+
+    setProcessingRequest(confirmAction.request.id);
+    
+    try {
+      const endpoint = `/api/warden/room-change-requests/${confirmAction.request.id}/${confirmAction.type}`;
+      const result = await apiCall('PUT', endpoint, {});
+      
+      if (result.success) {
+        setMessage(`Room change request ${confirmAction.type}d successfully!`);
+        fetchData(); // Refresh the data
+      } else {
+        setMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`Error: Failed to ${confirmAction.type} request`);
+    }
+    
+    setProcessingRequest(null);
+    setShowConfirmModal(false);
+    setConfirmAction({ type: '', request: null });
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const cancelRequestAction = () => {
+    setShowConfirmModal(false);
+    setConfirmAction({ type: '', request: null });
   };
 
   if (loading) {
@@ -677,14 +727,26 @@ Please share these credentials with the student.`);
                       </div>
                       <div className="request-details">
                         <p><strong>Current Room:</strong> {request.current_room || 'Not assigned'}</p>
-                        <p><strong>Requested Room:</strong> {request.requested_room}</p>
+                        <p><strong>Requested Room:</strong> {request.requested_room} (Bed {request.requested_bed_number})</p>
                         <p><strong>Reason:</strong> {request.reason}</p>
                         <p><strong>Requested Date:</strong> {new Date(request.requested_at).toLocaleDateString()}</p>
                       </div>
                       {request.status === 'pending' && (
                         <div className="request-actions">
-                          <button className="approve-button">Approve</button>
-                          <button className="reject-button">Reject</button>
+                          <button 
+                            className="approve-button"
+                            onClick={() => handleRequestAction(request, 'approve')}
+                            disabled={processingRequest === request.id}
+                          >
+                            {processingRequest === request.id ? 'Processing...' : 'Approve'}
+                          </button>
+                          <button 
+                            className="reject-button"
+                            onClick={() => handleRequestAction(request, 'reject')}
+                            disabled={processingRequest === request.id}
+                          >
+                            {processingRequest === request.id ? 'Processing...' : 'Reject'}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -695,6 +757,43 @@ Please share these credentials with the student.`);
           )}
         </main>
       </div>
+
+      {/* Confirmation Modal for Room Change Requests */}
+      {showConfirmModal && (
+        <div className="modal-overlay">
+          <div className="modal-content confirmation-modal">
+            <h3>Confirm Action</h3>
+            <p>
+              Are you sure you want to <strong>{confirmAction.type}</strong> the room change request from{' '}
+              <strong>{confirmAction.request?.student_name}</strong>?
+            </p>
+            
+            {confirmAction.type === 'approve' && (
+              <div className="action-details">
+                <p><strong>Student:</strong> {confirmAction.request?.student_name}</p>
+                <p><strong>From:</strong> {confirmAction.request?.current_room || 'Not assigned'}</p>
+                <p><strong>To:</strong> {confirmAction.request?.requested_room} (Bed {confirmAction.request?.requested_bed_number})</p>
+                <p><strong>Reason:</strong> {confirmAction.request?.reason}</p>
+              </div>
+            )}
+            
+            <div className="modal-actions">
+              <button 
+                className="cancel-button" 
+                onClick={cancelRequestAction}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`confirm-button ${confirmAction.type === 'approve' ? 'approve' : 'reject'}`}
+                onClick={confirmRequestAction}
+              >
+                {confirmAction.type === 'approve' ? 'Approve Request' : 'Reject Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
