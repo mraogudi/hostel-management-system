@@ -444,7 +444,16 @@ Please share these credentials with the student.`);
 
           {activeTab === 'overview' && (
             <div className="overview-section">
-              <h2>Hostel Overview</h2>
+              <div className="section-header">
+                <h2>Hostel Overview</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchData()}
+                  title="Refresh Overview Data"
+                >
+                  🔄
+                </button>
+              </div>
               <div className="stats-grid">
                 <div className="stat-card">
                   <h3>Total Rooms</h3>
@@ -486,7 +495,19 @@ Please share these credentials with the student.`);
 
           {activeTab === 'create' && (
             <div className="create-student-section">
-              <h2>Create Student Account</h2>
+              <div className="section-header">
+                <h2>Create Student Account</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => setNewStudent({
+                    full_name: '', email: '', phone: '', date_of_birth: '', gender: '',
+                    aadhaar_id: '', roll_no: '', stream: '', branch: ''
+                  })}
+                  title="Clear Form"
+                >
+                  🗑️
+                </button>
+              </div>
               <form onSubmit={handleCreateStudent} className="student-form">
                 
                 {/* Personal Information Section */}
@@ -703,7 +724,16 @@ Please share these credentials with the student.`);
 
           {activeTab === 'students' && (
             <div className="students-list-section">
-              <h2>Students List</h2>
+              <div className="section-header">
+                <h2>Students List</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchStudentsData()}
+                  title="Refresh Students Data"
+                >
+                  🔄
+                </button>
+              </div>
               
               <div className="students-summary">
                 <p>Total Students: <strong>{students.length}</strong></p>
@@ -774,7 +804,16 @@ Please share these credentials with the student.`);
 
           {activeTab === 'assign' && (
             <div className="assign-section">
-              <h2>Assign Room to Student</h2>
+              <div className="section-header">
+                <h2>Assign Room to Student</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchData()}
+                  title="Refresh Room Data"
+                >
+                  🔄
+                </button>
+              </div>
               <form onSubmit={handleRoomAssignment} className="assign-form">
                 <div className="form-group">
                   <label htmlFor="student_id">Student Roll Number</label>
@@ -853,7 +892,16 @@ Please share these credentials with the student.`);
 
           {activeTab === 'requests' && (
             <div className="requests-section">
-              <h2>Room Change Requests</h2>
+              <div className="section-header">
+                <h2>Room Change Requests</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchData()}
+                  title="Refresh Requests Data"
+                >
+                  🔄
+                </button>
+              </div>
               {roomChangeRequests.length === 0 ? (
                 <p>No room change requests at this time.</p>
               ) : (

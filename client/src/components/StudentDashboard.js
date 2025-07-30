@@ -166,7 +166,16 @@ const StudentDashboard = () => {
 
           {activeTab === 'room' && (
             <div className="room-info-section">
-              <h2>My Profile & Room Details</h2>
+              <div className="section-header">
+                <h2>My Profile & Room Details</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchData()}
+                  title="Refresh Room Data"
+                >
+                  🔄
+                </button>
+              </div>
               
               {/* Student Profile Section */}
               <div className="profile-card">
@@ -266,7 +275,16 @@ const StudentDashboard = () => {
 
           {activeTab === 'request' && (
             <div className="request-section">
-              <h2>Request Room Change</h2>
+              <div className="section-header">
+                <h2>Request Room Change</h2>
+                <button 
+                  className="refresh-btn"
+                  onClick={() => fetchData()}
+                  title="Refresh Available Rooms"
+                >
+                  🔄 
+                </button>
+              </div>
               
               {/* Current Room Details */}
               {roomInfo && (

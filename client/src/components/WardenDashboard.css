@@ -1020,6 +1020,80 @@ select:disabled {
   white-space: nowrap;
 }
 
+/* Section Header with Refresh Button */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #ecf0f1;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.8em;
+  font-weight: 600;
+}
+
+.refresh-btn {
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-btn:hover {
+  transform: translateY(-1px);
+}
+
+.refresh-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive design for section headers */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .section-header h2 {
+    font-size: 1.5em;
+  }
+  
+  .refresh-btn {
+    align-self: flex-end;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-header {
+    gap: 8px;
+  }
+  
+  .section-header h2 {
+    font-size: 1.3em;
+  }
+  
+  .refresh-btn {
+    width: 100%;
+    justify-content: center;
+    align-self: stretch;
+  }
+}
+
 /* Edit Student Modal Styles */
 .edit-student-modal {
   max-width: 600px;
