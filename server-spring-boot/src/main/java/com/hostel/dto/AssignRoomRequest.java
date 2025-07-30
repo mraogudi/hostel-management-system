@@ -1,0 +1,50 @@
+package com.hostel.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+public class AssignRoomRequest {
+    
+    @NotBlank(message = "Student ID is required")
+    private String studentId;
+    
+    @NotBlank(message = "Room ID is required")
+    private String roomId;
+    
+    @NotNull(message = "Bed number is required")
+    private Integer bedNumber;
+    
+    // Constructors
+    public AssignRoomRequest() {}
+    
+    public AssignRoomRequest(String studentId, String roomId, Integer bedNumber) {
+        this.studentId = studentId;
+        this.roomId = roomId;
+        this.bedNumber = bedNumber;
+    }
+    
+    // Getters and Setters
+    public String getStudentId() {
+        return studentId;
+    }
+    
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+    
+    public String getRoomId() {
+        return roomId;
+    }
+    
+    public void setRoomId(String roomId) {
+        this.roomId = roomId;
+    }
+    
+    public Integer getBedNumber() {
+        return bedNumber;
+    }
+    
+    public void setBedNumber(Integer bedNumber) {
+        this.bedNumber = bedNumber;
+    }
+} 
