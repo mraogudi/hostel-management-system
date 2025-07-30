@@ -5,7 +5,6 @@ import com.hostel.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,13 +29,10 @@ public class DataInitializationService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @PostConstruct
     public void initializeData() {
         // Create default warden if not exists
         if (userRepository.findByUsername("warden").isEmpty()) {
-            User warden = new User("warden", passwordEncoder.encode("warden123"), "warden", "System Warden", "warden@hostel.com", "9999999999");
-            userRepository.save(warden);
-            System.out.println("Default warden created: username=warden, password=warden123");
+            createDefaultWarden();
         }
 
         // Create sample rooms if none exist
@@ -48,20 +44,6 @@ public class DataInitializationService {
         if (foodMenuRepository.count() == 0) {
             createFoodMenu();
         }
-    }
-    
-    // Public method to force data reinitialization (for debugging)
-    public void forceReinitializeData() {
-        System.out.println("=== FORCE REINITIALIZING DATA ===");
-        
-        // Clear existing data
-        bedRepository.deleteAll();
-        roomRepository.deleteAll();
-        
-        // Recreate rooms and beds
-        createSampleRoomsWithBeds();
-        
-        System.out.println("=== FORCE REINITIALIZATION COMPLETE ===");
     }
 
     private void createDefaultWarden() {

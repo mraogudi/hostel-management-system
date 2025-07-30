@@ -24,6 +24,6 @@ public class HostelManagementSystemApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        initializationService.forceReinitializeData();
+        initializationService.initializeData();
     }
 }
