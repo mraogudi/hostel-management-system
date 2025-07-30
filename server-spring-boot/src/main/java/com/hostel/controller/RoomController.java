@@ -83,7 +83,7 @@ public class RoomController {
                 bedMap.put("student_id", bed.getStudentId() != null ? bed.getStudentId() : "");
                 bedMap.put("student_name", student != null ? student.getFullName() : null);
                 return bedMap;
-            }).collect(Collectors.toList());
+            }).toList();
             
             Map<String, Object> roomDetails = Map.of(
                 "id", room.getId(),

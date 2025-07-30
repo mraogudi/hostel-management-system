@@ -108,7 +108,7 @@ public class StudentController {
                     roommateMap.put("full_name", student != null ? student.getFullName() : "Unknown");
                     return roommateMap;
                 })
-                .collect(Collectors.toList());
+                .toList();
             
             Map<String, Object> myRoomDetails = Map.of(
                 "id", room.getId(),
