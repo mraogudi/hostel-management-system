@@ -1,5 +1,6 @@
 package com.hostel.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -9,10 +10,13 @@ public class Bed {
     @Id
     private String id;
     
+    @JsonProperty("room_id")
     private String roomId;
     
+    @JsonProperty("bed_number")
     private Integer bedNumber;
     
+    @JsonProperty("student_id")
     private String studentId;
     
     private String status; // "available" or "occupied"

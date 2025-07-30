@@ -1,28 +1,27 @@
 {
   "name": "hostel-management-system",
   "version": "1.0.0",
-  "description": "A comprehensive hostel management system for students and wardens",
+  "description": "A complete hostel management system with React frontend and Spring Boot backend",
   "main": "server/index.js",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "nodemon server/index.js",
-    "client": "cd client && npm start",
-    "install-deps": "npm install && cd client && npm install",
-    "build": "cd client && npm run build"
+    "start": "echo 'Use npm run start:frontend and npm run start:backend in separate terminals'",
+    "start:frontend": "cd client && npm start",
+    "start:backend": "cd server-spring-boot && mvn spring-boot:run",
+    "install:frontend": "cd client && npm install",
+    "install:backend": "cd server-spring-boot && mvn clean install",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "dev": "echo 'Starting integrated development environment...' && echo 'Backend: http://localhost:8080' && echo 'Frontend: http://localhost:3000' && echo 'Please run: npm run start:backend and npm run start:frontend in separate terminals'"
   },
-  "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
-    "dotenv": "^16.3.1",
-    "body-parser": "^1.20.2"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1",
-    "concurrently": "^8.2.2"
-  },
-  "keywords": ["hostel", "management", "student", "warden", "room", "booking"],
+  "keywords": [
+    "hostel-management",
+    "react",
+    "spring-boot",
+    "mongodb",
+    "jwt-authentication"
+  ],
   "author": "Hostel Management Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
 } 

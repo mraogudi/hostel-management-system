@@ -1,5 +1,6 @@
 package com.hostel.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -14,17 +15,21 @@ public class Room {
     private String id;
     
     @Indexed(unique = true)
+    @JsonProperty("room_number")
     private String roomNumber;
     
     private Integer floor;
     
     private Integer capacity;
     
+    @JsonProperty("occupied_beds")
     private Integer occupiedBeds;
     
+    @JsonProperty("room_type")
     private String roomType;
     
     @CreatedDate
+    @JsonProperty("created_at")
     private LocalDateTime createdAt;
     
     // Constructors

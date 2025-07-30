@@ -1,5 +1,6 @@
 package com.hostel.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -12,13 +13,16 @@ public class FoodMenu {
     @Id
     private String id;
     
+    @JsonProperty("meal_type")
     private String mealType; // "breakfast", "lunch", "dinner"
     
+    @JsonProperty("day_of_week")
     private String dayOfWeek; // "Monday", "Tuesday", etc.
     
     private String items;
     
     @CreatedDate
+    @JsonProperty("created_at")
     private LocalDateTime createdAt;
     
     // Constructors

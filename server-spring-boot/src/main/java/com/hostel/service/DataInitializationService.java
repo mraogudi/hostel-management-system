@@ -2,8 +2,6 @@ package com.hostel.service;
 
 import com.hostel.model.*;
 import com.hostel.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,29 +9,27 @@ import java.util.Arrays;
 import java.util.List;
 
 @Service
-public class DataInitializationService implements CommandLineRunner {
+public class DataInitializationService {
     
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     
-    @Autowired
-    private RoomRepository roomRepository;
+    private final RoomRepository roomRepository;
     
-    @Autowired
-    private BedRepository bedRepository;
+    private final BedRepository bedRepository;
     
-    @Autowired
-    private FoodMenuRepository foodMenuRepository;
+    private final FoodMenuRepository foodMenuRepository;
     
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @Override
-    public void run(String... args) throws Exception {
-        initializeDatabase();
+    private final PasswordEncoder passwordEncoder;
+
+    public DataInitializationService(UserRepository userRepository, RoomRepository roomRepository, BedRepository bedRepository, FoodMenuRepository foodMenuRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.roomRepository = roomRepository;
+        this.bedRepository = bedRepository;
+        this.foodMenuRepository = foodMenuRepository;
+        this.passwordEncoder = passwordEncoder;
     }
-    
-    private void initializeDatabase() {
+
+    public void initializeDatabase() {
         // Check if data already exists
         if (userRepository.count() > 0) {
             System.out.println("Database already initialized, skipping data initialization");

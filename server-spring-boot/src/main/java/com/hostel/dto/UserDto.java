@@ -1,5 +1,6 @@
 package com.hostel.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 public class UserDto {
@@ -7,9 +8,14 @@ public class UserDto {
     private String id;
     private String username;
     private String role;
+    
+    @JsonProperty("full_name")
     private String fullName;
+    
     private String email;
     private String phone;
+    
+    @JsonProperty("created_at")
     private LocalDateTime createdAt;
     
     // Constructors

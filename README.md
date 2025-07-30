@@ -1,210 +1,194 @@
 # Hostel Management System
 
-A comprehensive web application for managing hostel operations, designed for both students and wardens.
+A complete hostel management system built with **React frontend** and **Spring Boot backend**, featuring JWT authentication, room management, and student operations.
 
-## Features
+## 🏗️ Architecture
 
-### For Students:
-- **Room Details**: View assigned room information and roommates
-- **Food Menu**: Check daily meal schedules and menus
-- **Room Change Requests**: Submit requests to change rooms with reasons
+- **Frontend**: React 18 with React Router and Axios
+- **Backend**: Spring Boot 3 with MongoDB
+- **Authentication**: JWT tokens
+- **Database**: MongoDB
 
-### For Wardens (Admin):
-- **Student Management**: Create student accounts with auto-generated credentials
-- **Room Assignment**: Assign students to specific rooms and beds
-- **Room Management**: View detailed room occupancy and bed assignments
-- **Request Management**: Review and process room change requests
-- **Dashboard Overview**: Get insights into hostel occupancy statistics
-
-## Technology Stack
-
-- **Frontend**: React.js with modern UI components
-- **Backend**: Node.js with Express.js
-- **Database**: SQLite (for development)
-- **Authentication**: JWT (JSON Web Tokens)
-- **Styling**: CSS3 with modern design patterns
-
-## Project Structure
-
-```
-hostel-management-system/
-├── server/
-│   ├── index.js          # Main server file with all APIs
-│   └── database.db       # SQLite database (auto-generated)
-├── client/
-│   ├── public/
-│   │   └── index.html
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Login.js           # Login component
-│   │   │   ├── StudentDashboard.js # Student portal
-│   │   │   ├── WardenDashboard.js  # Warden portal
-│   │   │   └── *.css             # Component styles
-│   │   ├── context/
-│   │   │   └── AuthContext.js    # Authentication context
-│   │   ├── App.js               # Main app component
-│   │   ├── App.css             # Global styles
-│   │   └── index.js            # App entry point
-│   └── package.json            # Client dependencies
-├── package.json                # Server dependencies
-└── README.md                  # This file
-```
-
-## Installation & Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm (v6 or higher)
 
-### Installation Steps
+- **Node.js** (v16 or higher)
+- **Java** (v17 or higher)
+- **Maven** (v3.6 or higher)
+- **MongoDB** (v4.4 or higher)
 
-1. **Clone or navigate to the project directory:**
-   ```bash
-   cd Workspace/hostel-management-system
-   ```
+### 1. Start MongoDB
 
-2. **Install server dependencies:**
-   ```bash
-   npm install
-   ```
+Make sure MongoDB is running on `mongodb://localhost:27017`
 
-3. **Install client dependencies:**
-   ```bash
-   cd client
-   npm install
-   cd ..
-   ```
-
-4. **Run the application:**
-   ```bash
-   npm run dev
-   ```
-
-   This will start both the backend server (port 5000) and React frontend (port 3000).
-
-### Alternative: Run separately
-
-**Backend only:**
 ```bash
-npm run server
+# Start MongoDB service
+# On Windows:
+net start MongoDB
+
+# On macOS/Linux:
+sudo systemctl start mongod
+# or
+brew services start mongodb/brew/mongodb-community
 ```
 
-**Frontend only:**
+### 2. Start the Backend (Spring Boot)
+
 ```bash
-npm run client
+# Navigate to Spring Boot directory
+cd server-spring-boot
+
+# Install dependencies and run
+mvn clean install
+mvn spring-boot:run
+
+# The backend will start on http://localhost:8080
 ```
 
-## Usage
+### 3. Start the Frontend (React)
 
-### Default Login Credentials
+```bash
+# Open a new terminal and navigate to client directory
+cd client
 
-**Warden (Admin):**
-- Username: `warden`
-- Password: `warden123`
+# Install dependencies
+npm install
 
-**Students:**
-Student accounts must be created by the warden. The warden can create student accounts and will receive auto-generated login credentials to share with students.
+# Start the development server
+npm start
 
-### Getting Started
+# The frontend will start on http://localhost:3000
+```
 
-1. **Access the application**: Open http://localhost:3000 in your browser
-2. **Login as Warden**: Use the default warden credentials
-3. **Create Student Accounts**: Navigate to "Create Student" tab
-4. **Assign Rooms**: Use "Assign Rooms" tab to allocate beds to students
-5. **Manage Requests**: Monitor room change requests in "Change Requests" tab
+## 🔑 Default Credentials
 
-## Database Schema
+After the first run, the system creates a default warden account:
 
-The application automatically creates the following tables:
+- **Username**: `warden`
+- **Password**: `warden123`
+- **Role**: `warden`
 
-- **users**: Stores student and warden account information
-- **rooms**: Contains room details (10 rooms, 3 beds each)
+## 📱 Features
+
+### For Wardens
+- 🏠 **Room Management**: View all rooms and their occupancy status
+- 👥 **Student Management**: Create new student accounts with auto-generated passwords
+- 🛏️ **Room Assignment**: Assign students to specific rooms and beds
+- 📋 **Change Requests**: Review and manage room change requests from students
+- 📊 **Dashboard**: Overview of hostel statistics and occupancy
+
+### For Students
+- 🏠 **My Room**: View current room details and roommate information
+- 🍽️ **Food Menu**: Check weekly meal schedules
+- 🔄 **Room Change**: Submit room change requests with reasons
+- 👤 **Profile**: View personal information
+
+## 🛠️ Technology Stack
+
+### Backend (Spring Boot)
+- **Framework**: Spring Boot 3.2
+- **Security**: Spring Security with JWT
+- **Database**: MongoDB with Spring Data
+- **Validation**: Bean Validation (JSR-303)
+- **Password Encryption**: BCrypt
+
+### Frontend (React)
+- **Framework**: React 18
+- **Routing**: React Router v6
+- **HTTP Client**: Axios
+- **State Management**: React Context API
+- **Authentication**: JWT token management
+
+## 📊 Database Collections
+
+The application uses MongoDB with the following collections:
+
+- **users**: Student and warden accounts
+- **rooms**: Room information and capacity
 - **beds**: Individual bed assignments
-- **food_menu**: Weekly meal schedules
 - **room_change_requests**: Student room change requests
+- **food_menu**: Weekly meal schedules
 
-## API Endpoints
+## 🔗 API Integration
 
-### Authentication
+The React frontend automatically connects to the Spring Boot backend through:
+
+- **Proxy Configuration**: All API calls are proxied to `http://localhost:8080`
+- **JWT Authentication**: Automatic token management in HTTP headers
+- **Error Handling**: Comprehensive error handling for API failures
+- **CORS**: Properly configured for cross-origin requests
+
+### Key API Endpoints
+
 - `POST /api/login` - User authentication
 - `GET /api/profile` - Get user profile
-
-### Student Endpoints
-- `GET /api/student/my-room` - Get assigned room details
+- `GET /api/rooms` - Get all rooms with statistics
+- `GET /api/food-menu` - Get weekly food menu
+- `POST /api/warden/create-student` - Create new student account
+- `POST /api/warden/assign-room` - Assign room to student
 - `POST /api/student/room-change-request` - Submit room change request
 
-### Warden Endpoints
-- `POST /api/warden/create-student` - Create student account
-- `POST /api/warden/assign-room` - Assign room to student
-- `GET /api/warden/room-change-requests` - Get all room change requests
+## 🔧 Configuration
 
-### General Endpoints
-- `GET /api/rooms` - Get all rooms with occupancy
-- `GET /api/rooms/:id` - Get specific room details
-- `GET /api/food-menu` - Get food menu
+### Backend Configuration (`application.yml`)
 
-## Features in Detail
+```yaml
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/hostel_management
+server:
+  port: 8080
+app:
+  jwt:
+    secret: your-secret-key
+    expiration: 86400000 # 24 hours
+```
 
-### Room Management
-- **10 Rooms Total**: Each room has 3 beds (30 total capacity)
-- **Floor Assignment**: Rooms are distributed across multiple floors
-- **Real-time Occupancy**: Track available vs occupied beds
-- **Bed-level Assignment**: Assign specific beds to students
+### Frontend Configuration
 
-### Food Menu System
-- **Weekly Schedule**: Different menus for each day
-- **Meal Types**: Breakfast, lunch, and dinner
-- **Student Access**: Students can view current week's menu
+The React app is configured to proxy API requests to the Spring Boot backend:
 
-### Request System
-- **Room Changes**: Students can request room changes with reasons
-- **Approval Workflow**: Wardens can approve or reject requests
-- **Status Tracking**: Monitor request status and history
+```json
+{
+  "proxy": "http://localhost:8080"
+}
+```
 
-## Development
-
-### Adding New Features
-1. **Backend**: Add new routes in `server/index.js`
-2. **Frontend**: Create new components in `client/src/components/`
-3. **Database**: Modify schema in the database initialization section
-
-### Styling
-- Component-specific styles in individual CSS files
-- Global styles in `App.css`
-- Responsive design with mobile-first approach
-
-## Security Features
-
-- **JWT Authentication**: Secure token-based authentication
-- **Role-based Access**: Different permissions for students and wardens
-- **Password Hashing**: Secure password storage using bcrypt
-- **Input Validation**: Server-side validation for all inputs
-
-## Troubleshooting
+## 🚨 Troubleshooting
 
 ### Common Issues
 
-1. **Port already in use**: Change ports in package.json scripts
-2. **Database not found**: Server will auto-create database on first run
-3. **React app won't start**: Ensure client dependencies are installed
+1. **MongoDB Connection Error**
+   - Ensure MongoDB is running on port 27017
+   - Check MongoDB service status
 
-### Development Mode
-- Backend logs all API calls to console
-- Frontend includes error boundaries for debugging
-- Database recreates tables if needed
+2. **CORS Issues**
+   - All Spring Boot controllers are configured with `@CrossOrigin(origins = "*")`
+   - Ensure both frontend and backend are running
 
-## Future Enhancements
+3. **Port Conflicts**
+   - Backend runs on port 8080
+   - Frontend runs on port 3000
+   - Make sure these ports are available
 
-- **Payment Integration**: Hostel fee management
-- **Notifications**: Real-time notifications for requests
-- **Advanced Reporting**: Detailed analytics and reports
-- **Mobile App**: Native mobile application
-- **Guest Management**: Visitor registration system
+4. **Authentication Issues**
+   - JWT tokens are stored in localStorage
+   - Check browser dev tools for token presence
+   - Default warden credentials are created on first startup
 
-## Support
+### Development Tips
 
-For technical support or feature requests, please refer to the application documentation or contact the development team.
+- **Hot Reload**: Frontend supports hot reload for development
+- **Database Reset**: Drop the `hostel_management` database to reset all data
+- **Logs**: Check Spring Boot console for detailed error logs
+- **Network Tab**: Use browser dev tools to debug API calls
+
+## 📝 License
+
+This project is built for educational purposes and hostel management automation.
 
 ---
 
-**Note**: This is a development version. For production deployment, additional security measures and environment configurations should be implemented. 
+🚀 **Ready to go!** Start both servers and navigate to `http://localhost:3000` to access the application. 
