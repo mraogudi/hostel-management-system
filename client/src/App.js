@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import StudentDashboard from './components/StudentDashboard';
 import WardenDashboard from './components/WardenDashboard';
+import ChangePassword from './components/ChangePassword';
 import './App.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <div className="App">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             <Route path="/student" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />
             <Route path="/warden" element={<ProtectedRoute role="warden"><WardenDashboard /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/login" />} />
@@ -32,6 +34,11 @@ function ProtectedRoute({ children, role }) {
 
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Check if student needs to change password first
+  if (user.role === 'student' && user.first_login && window.location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" />;
   }
 
   if (role && user.role !== role) {

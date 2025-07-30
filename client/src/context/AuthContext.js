@@ -31,9 +31,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.get('/api/profile');
       setUser(response.data);
+      return { success: true, user: response.data };
     } catch (error) {
       console.error('Error fetching profile:', error);
       logout();
+      return { success: false, error: 'Failed to fetch profile' };
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
-    apiCall
+    apiCall,
+    fetchProfile
   };
 
   return (

@@ -112,7 +112,48 @@ const StudentDashboard = () => {
 
           {activeTab === 'room' && (
             <div className="room-info-section">
-              <h2>My Room Details</h2>
+              <h2>My Profile & Room Details</h2>
+              
+              {/* Student Profile Section */}
+              <div className="profile-card">
+                <h3>Student Information</h3>
+                <div className="profile-details">
+                  <div className="detail-row">
+                    <div className="detail-item">
+                      <strong>Full Name:</strong> {user.full_name}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Roll Number:</strong> {user.roll_no || 'Not assigned'}
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <div className="detail-item">
+                      <strong>Stream:</strong> {user.stream || 'Not specified'}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Branch:</strong> {user.branch || 'Not specified'}
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <div className="detail-item">
+                      <strong>Gender:</strong> {user.gender || 'Not specified'}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Email:</strong> {user.email || 'Not provided'}
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <div className="detail-item">
+                      <strong>Phone:</strong> {user.phone || 'Not provided'}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Date of Birth:</strong> {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'Not provided'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Room Information Section */}
               {roomInfo ? (
                 <div className="room-card">
                   <div className="room-header">

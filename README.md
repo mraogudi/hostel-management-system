@@ -69,20 +69,150 @@ After the first run, the system creates a default warden account:
 - **Password**: `warden123`
 - **Role**: `warden`
 
+**For Students**: Students receive auto-generated credentials when their account is created by the warden:
+- **Username**: Their Roll Number (e.g., if roll number is "CS2024001", username is "CS2024001")
+- **Password**: Auto-generated 8-character secure password
+- **Role**: `student`
+
+**🔐 First-Time Login Security**: Students must change their password on first login before accessing the dashboard.
+
 ## 📱 Features
 
 ### For Wardens
 - 🏠 **Room Management**: View all rooms and their occupancy status
-- 👥 **Student Management**: Create new student accounts with auto-generated passwords
+- 👥 **Enhanced Student Management**: Create comprehensive student profiles with detailed information
 - 🛏️ **Room Assignment**: Assign students to specific rooms and beds
 - 📋 **Change Requests**: Review and manage room change requests from students
 - 📊 **Dashboard**: Overview of hostel statistics and occupancy
 
+#### 🆕 Enhanced Student Registration
+The student registration form now captures comprehensive student information:
+
+**Personal Information:**
+- Full Name
+- Date of Birth with validation
+- Gender (Male/Female/Other)
+- 12-digit Aadhaar ID with automatic formatting
+
+**Contact Information:**
+- Email Address (optional)
+- 10-digit Phone Number with automatic formatting and validation
+
+**Phone Number Validation Features:**
+- ✅ Required field with comprehensive validation
+- ✅ Must be exactly 10 digits
+- ✅ Must start with 6, 7, 8, or 9 (Indian mobile number format)
+- ✅ Real-time validation feedback with error/success messages
+- ✅ Automatic formatting (numbers only)
+- ✅ Duplicate phone number checking
+- ✅ Enhanced visual feedback with validation states
+
+**Academic Information:**
+- Roll Number (auto-formatted to uppercase, used as login username)
+- Stream (Engineering, Medical, Commerce, Arts, Science, Management)
+- Branch/Specialization
+
+**Login System:**
+- ✅ **Simplified Authentication**: Roll number serves as the username
+- ✅ **Auto-generated passwords**: Secure 8-character passwords created automatically
+- ✅ **No separate username field**: Eliminates confusion and simplifies the process
+
+**Features:**
+- ✅ Real-time validation and formatting
+- ✅ Duplicate checking for Aadhaar ID, Roll Number, and Phone Number
+- ✅ Auto-generated secure passwords
+- ✅ **Simplified login**: Roll number used as username
+- ✅ Comprehensive success message with student details
+- ✅ Form reset functionality
+- ✅ Mobile-responsive design with sectioned layout
+
+### 🎯 **Key Features Implemented:**
+
+✅ **Simplified Authentication System**: Roll number serves as username  
+✅ **First-Time Login Security**: Mandatory password change for new students  
+✅ **Service Layer Architecture**: Clean separation of business logic from controllers  
+✅ **Real-time input formatting and validation**  
+✅ **Duplicate checking for sensitive fields**  
+✅ **Sectioned form layout for better UX**  
+✅ **Mobile-responsive design**  
+✅ **Enhanced success messages with complete student details**  
+✅ **Automatic password generation**  
+✅ **Form reset functionality**  
+✅ **Enhanced student profile display**  
+✅ **Comprehensive error handling**  
+✅ **MongoDB integration with proper indexing**  
+✅ **Protected routing with role-based access**
+
+## 🏗️ **Architecture Overview**
+
+The application follows a **layered architecture** pattern with clear separation of concerns:
+
+### **Controller Layer** (`@RestController`)
+- Handles HTTP requests and responses
+- Input validation and error handling
+- Maps endpoints to service methods
+- Maintains clean, focused controllers
+
+### **Service Layer** (`@Service`)
+- **AuthService**: User authentication, password management, profile operations
+- **StudentService**: Student lifecycle management, room assignments, change requests
+- **RoomService**: Room management, occupancy tracking, statistics
+- **FoodMenuService**: Food menu operations and data management
+
+### **Repository Layer** (`@Repository`)
+- Data access and database operations
+- Spring Data MongoDB integration
+- Custom query methods
+
+### **Model Layer** (`@Document`)
+- Entity definitions with MongoDB mapping
+- Field validation annotations
+- JSON serialization configuration
+
+This architecture provides:
+- ✅ **Maintainability**: Business logic centralized in services
+- ✅ **Testability**: Services can be unit tested independently
+- ✅ **Scalability**: Easy to modify business rules without affecting controllers
+- ✅ **Code Reusability**: Services can be used across multiple controllers
+- ✅ **Single Responsibility**: Each layer has a clear, focused purpose
+
+### 📋 Field Validation Summary
+
+| Field | Type | Validation Rules | Required |
+|-------|------|------------------|----------|
+| Full Name | Text | Not blank | ✅ |
+| Date of Birth | Date | Must be in past | ✅ |
+| Gender | Select | Male/Female/Other | ✅ |
+| Aadhaar ID | Text | 12 digits, unique | ✅ |
+| Roll Number | Text | Unique, auto-uppercase, used as username | ✅ |
+| Stream | Select | Predefined options | ✅ |
+| Branch | Text | Not blank | ✅ |
+| Phone Number | Tel | 10 digits starting with 6-9, unique | ✅ |
+| Email | Email | Valid format | ❌ |
+
+**Note**: Roll Number serves as both the student identifier and login username, simplifying the authentication process.
+
 ### For Students
-- 🏠 **My Room**: View current room details and roommate information
+- 🏠 **Enhanced Profile & Room View**: Comprehensive student profile display with room details
 - 🍽️ **Food Menu**: Check weekly meal schedules
 - 🔄 **Room Change**: Submit room change requests with reasons
-- 👤 **Profile**: View personal information
+- 👤 **Detailed Profile**: View all personal and academic information
+- 🔐 **Secure First Login**: Mandatory password change on first login
+
+#### 🆕 Enhanced Student Profile Display
+Students can now view their complete profile information including:
+- Personal details (Name, DOB, Gender, Aadhaar ID)
+- Contact information (Email, Phone)
+- Academic details (Roll Number, Stream, Branch)
+- Room assignment and roommate information
+
+#### 🔐 First-Time Login Security Flow
+**Enhanced Security Features:**
+- ✅ **Mandatory Password Change**: Students must change password on first login
+- ✅ **Secure Validation**: Current password verification required
+- ✅ **Real-time Feedback**: Password strength and match validation
+- ✅ **Auto-redirect**: Seamless flow to dashboard after password change
+- ✅ **Protected Routes**: Cannot access dashboard until password is changed
 
 ## 🛠️ Technology Stack
 
@@ -90,8 +220,15 @@ After the first run, the system creates a default warden account:
 - **Framework**: Spring Boot 3.2
 - **Security**: Spring Security with JWT
 - **Database**: MongoDB with Spring Data
+- **Architecture**: Layered architecture with Service Layer separation
 - **Validation**: Bean Validation (JSR-303)
 - **Password Encryption**: BCrypt
+
+**Service Layer Components:**
+- **AuthService**: Authentication and password management
+- **StudentService**: Student creation, room assignment, and requests
+- **RoomService**: Room management and occupancy tracking
+- **FoodMenuService**: Food menu operations and management
 
 ### Frontend (React)
 - **Framework**: React 18
@@ -123,6 +260,7 @@ The React frontend automatically connects to the Spring Boot backend through:
 
 - `POST /api/login` - User authentication
 - `GET /api/profile` - Get user profile
+- `POST /api/change-password` - Change user password (authenticated)
 - `GET /api/rooms` - Get all rooms with statistics
 - `GET /api/food-menu` - Get weekly food menu
 - `POST /api/warden/create-student` - Create new student account

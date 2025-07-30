@@ -12,7 +12,12 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate(user.role === 'warden' ? '/warden' : '/student');
+      // Check if student needs to change password
+      if (user.role === 'student' && user.first_login) {
+        navigate('/change-password');
+      } else {
+        navigate(user.role === 'warden' ? '/warden' : '/student');
+      }
     }
   }, [user, navigate]);
 
@@ -24,7 +29,12 @@ const Login = () => {
     const result = await login(credentials.username, credentials.password);
     
     if (result.success) {
-      navigate(result.user.role === 'warden' ? '/warden' : '/student');
+      // Check if student needs to change password
+      if (result.user.role === 'student' && result.user.first_login) {
+        navigate('/change-password');
+      } else {
+        navigate(result.user.role === 'warden' ? '/warden' : '/student');
+      }
     } else {
       setError(result.error);
     }
@@ -86,15 +96,9 @@ const Login = () => {
         </form>
 
         <div className="login-info">
-          <div className="demo-credentials">
-            <h3>Demo Credentials:</h3>
-            <div className="credential-item">
-              <strong>Warden:</strong> username: warden, password: warden123
-            </div>
-            <div className="credential-item">
+        <div className="credential-item">
               <small>Student accounts are created by the warden</small>
             </div>
-          </div>
         </div>
       </div>
     </div>

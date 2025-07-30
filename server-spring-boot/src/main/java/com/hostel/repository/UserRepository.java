@@ -14,4 +14,17 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByRole(String role);
     
     boolean existsByUsername(String username);
+    
+    // New methods for student-specific fields
+    Optional<User> findByAadhaarId(String aadhaarId);
+    
+    Optional<User> findByRollNo(String rollNo);
+    
+    Optional<User> findByPhone(String phone);
+    
+    boolean existsByAadhaarId(String aadhaarId);
+    
+    boolean existsByRollNo(String rollNo);
+    
+    boolean existsByPhone(String phone);
 } 

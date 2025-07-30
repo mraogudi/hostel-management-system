@@ -13,10 +13,15 @@ const WardenDashboard = () => {
   
   // Form states
   const [newStudent, setNewStudent] = useState({
-    username: '',
     full_name: '',
     email: '',
-    phone: ''
+    phone: '',
+    date_of_birth: '',
+    gender: '',
+    aadhaar_id: '',
+    roll_no: '',
+    stream: '',
+    branch: ''
   });
   
   const [roomAssignment, setRoomAssignment] = useState({
@@ -52,16 +57,49 @@ const WardenDashboard = () => {
   const handleCreateStudent = async (e) => {
     e.preventDefault();
     
+    // Client-side validation
+    if (newStudent.phone && !/^[6-9][0-9]{9}$/.test(newStudent.phone)) {
+      setMessage('Error: Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9');
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+    
     const result = await apiCall('POST', '/api/warden/create-student', newStudent);
     
     if (result.success) {
-      setMessage(`Student created successfully! Username: ${result.data.credentials.username}, Password: ${result.data.credentials.password}`);
-      setNewStudent({ username: '', full_name: '', email: '', phone: '' });
+      const student = result.data.student;
+      const credentials = result.data.credentials;
+      
+      setMessage(`Student created successfully! 
+        
+Student Details:
+- Name: ${student.full_name}
+- Roll No: ${student.roll_no}
+- Stream: ${student.stream}
+- Branch: ${student.branch}
+
+Login Credentials:
+- Username: ${credentials.username} (Roll Number)
+- Password: ${credentials.password}
+
+Please share these credentials with the student.`);
+      
+      setNewStudent({ 
+        full_name: '', 
+        email: '', 
+        phone: '',
+        date_of_birth: '',
+        gender: '',
+        aadhaar_id: '',
+        roll_no: '',
+        stream: '',
+        branch: ''
+      });
     } else {
       setMessage(`Error: ${result.error}`);
     }
 
-    setTimeout(() => setMessage(''), 10000);
+    setTimeout(() => setMessage(''), 15000);
   };
 
   const handleRoomAssignment = async (e) => {
@@ -208,71 +246,215 @@ const WardenDashboard = () => {
             <div className="students-section">
               <h2>Create Student Account</h2>
               <form onSubmit={handleCreateStudent} className="student-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="username">Username</label>
-                    <input
-                      type="text"
-                      id="username"
-                      value={newStudent.username}
-                      onChange={(e) => setNewStudent({
-                        ...newStudent,
-                        username: e.target.value
-                      })}
-                      required
-                      placeholder="Enter username"
-                    />
-                  </div>
+                
+                {/* Personal Information Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Personal Information</h3>
                   
-                  <div className="form-group">
-                    <label htmlFor="full_name">Full Name</label>
-                    <input
-                      type="text"
-                      id="full_name"
-                      value={newStudent.full_name}
-                      onChange={(e) => setNewStudent({
-                        ...newStudent,
-                        full_name: e.target.value
-                      })}
-                      required
-                      placeholder="Enter full name"
-                    />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="full_name">Full Name *</label>
+                      <input
+                        type="text"
+                        id="full_name"
+                        value={newStudent.full_name}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          full_name: e.target.value
+                        })}
+                        required
+                        placeholder="Enter full name"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="date_of_birth">Date of Birth *</label>
+                      <input
+                        type="date"
+                        id="date_of_birth"
+                        value={newStudent.date_of_birth}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          date_of_birth: e.target.value
+                        })}
+                        required
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="gender">Gender *</label>
+                      <select
+                        id="gender"
+                        value={newStudent.gender}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          gender: e.target.value
+                        })}
+                        required
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="aadhaar_id">Aadhaar ID *</label>
+                      <input
+                        type="text"
+                        id="aadhaar_id"
+                        value={newStudent.aadhaar_id}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          aadhaar_id: e.target.value.replace(/\D/g, '').slice(0, 12)
+                        })}
+                        required
+                        placeholder="Enter 12-digit Aadhaar ID"
+                        pattern="[0-9]{12}"
+                        maxLength="12"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="email">Email</label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={newStudent.email}
-                      onChange={(e) => setNewStudent({
-                        ...newStudent,
-                        email: e.target.value
-                      })}
-                      placeholder="Enter email address"
-                    />
-                  </div>
+                {/* Contact Information Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Contact Information</h3>
                   
-                  <div className="form-group">
-                    <label htmlFor="phone">Phone</label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      value={newStudent.phone}
-                      onChange={(e) => setNewStudent({
-                        ...newStudent,
-                        phone: e.target.value
-                      })}
-                      placeholder="Enter phone number"
-                    />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="email">Email Address</label>
+                      <input
+                        type="email"
+                        id="email"
+                        value={newStudent.email}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          email: e.target.value
+                        })}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="phone">Phone Number *</label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        value={newStudent.phone}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setNewStudent({
+                            ...newStudent,
+                            phone: value
+                          });
+                        }}
+                        required
+                        placeholder="Enter 10-digit mobile number"
+                        pattern="^[6-9][0-9]{9}$"
+                        maxLength="10"
+                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
+                      />
+                      {newStudent.phone && newStudent.phone.length > 0 && newStudent.phone.length < 10 && (
+                        <span className="validation-error">Phone number must be 10 digits</span>
+                      )}
+                      {newStudent.phone && newStudent.phone.length === 10 && !/^[6-9]/.test(newStudent.phone) && (
+                        <span className="validation-error">Phone number must start with 6, 7, 8, or 9</span>
+                      )}
+                      {newStudent.phone && newStudent.phone.length === 10 && /^[6-9][0-9]{9}$/.test(newStudent.phone) && (
+                        <span className="validation-success">✓ Valid phone number</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <button type="submit" className="submit-button">
-                  Create Student Account
-                </button>
+                {/* Academic Information Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Academic Information</h3>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="roll_no">Roll Number *</label>
+                      <input
+                        type="text"
+                        id="roll_no"
+                        value={newStudent.roll_no}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          roll_no: e.target.value.toUpperCase()
+                        })}
+                        required
+                        placeholder="Enter roll number (will be used as username)"
+                      />
+                      <small className="field-note">Note: Roll number will be used as the login username</small>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="stream">Stream *</label>
+                      <select
+                        id="stream"
+                        value={newStudent.stream}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          stream: e.target.value
+                        })}
+                        required
+                      >
+                        <option value="">Select Stream</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Medical">Medical</option>
+                        <option value="Commerce">Commerce</option>
+                        <option value="Arts">Arts</option>
+                        <option value="Science">Science</option>
+                        <option value="Management">Management</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="branch">Branch *</label>
+                      <input
+                        type="text"
+                        id="branch"
+                        value={newStudent.branch}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          branch: e.target.value
+                        })}
+                        required
+                        placeholder="Enter branch/specialization"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <button type="submit" className="submit-button">
+                    Create Student Account
+                  </button>
+                  <button 
+                    type="button" 
+                    className="reset-button"
+                    onClick={() => setNewStudent({
+                      full_name: '',
+                      email: '',
+                      phone: '',
+                      date_of_birth: '',
+                      gender: '',
+                      aadhaar_id: '',
+                      roll_no: '',
+                      stream: '',
+                      branch: ''
+                    })}
+                  >
+                    Reset Form
+                  </button>
+                </div>
               </form>
             </div>
           )}
