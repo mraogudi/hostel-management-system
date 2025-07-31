@@ -47,12 +47,47 @@ public class CreateStudentRequest {
     @NotBlank(message = "Branch is required")
     private String branch;
     
+    // Address fields
+    @NotBlank(message = "Address line 1 is required")
+    @JsonProperty("address_line1")
+    private String addressLine1;
+    
+    @JsonProperty("address_line2")
+    private String addressLine2; // Optional
+    
+    @NotBlank(message = "City is required")
+    private String city;
+    
+    @NotBlank(message = "State is required")
+    private String state;
+    
+    @NotBlank(message = "Postal code is required")
+    @Pattern(regexp = "^[0-9]{6}$", message = "Postal code must be 6 digits")
+    @JsonProperty("postal_code")
+    private String postalCode;
+    
+    // Guardian fields
+    @NotBlank(message = "Guardian name is required")
+    @JsonProperty("guardian_name")
+    private String guardianName;
+    
+    @NotBlank(message = "Guardian address is required")
+    @JsonProperty("guardian_address")
+    private String guardianAddress;
+    
+    @NotBlank(message = "Guardian phone number is required")
+    @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Guardian phone must be a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9")
+    @JsonProperty("guardian_phone")
+    private String guardianPhone;
+    
     // Constructors
     public CreateStudentRequest() {}
     
     public CreateStudentRequest(String fullName, String email, String phone,
                                LocalDate dateOfBirth, String gender, String aadhaarId, 
-                               String rollNo, String stream, String branch) {
+                               String rollNo, String stream, String branch,
+                               String addressLine1, String addressLine2, String city, String state, String postalCode,
+                               String guardianName, String guardianAddress, String guardianPhone) {
         this.fullName = fullName;
         this.email = email;
         this.phone = phone;
@@ -62,6 +97,14 @@ public class CreateStudentRequest {
         this.rollNo = rollNo;
         this.stream = stream;
         this.branch = branch;
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.guardianName = guardianName;
+        this.guardianAddress = guardianAddress;
+        this.guardianPhone = guardianPhone;
     }
     
     // Getters and Setters - removed username getter/setter
@@ -135,5 +178,71 @@ public class CreateStudentRequest {
     
     public void setBranch(String branch) {
         this.branch = branch;
+    }
+    
+    // Address field getters and setters
+    public String getAddressLine1() {
+        return addressLine1;
+    }
+    
+    public void setAddressLine1(String addressLine1) {
+        this.addressLine1 = addressLine1;
+    }
+    
+    public String getAddressLine2() {
+        return addressLine2;
+    }
+    
+    public void setAddressLine2(String addressLine2) {
+        this.addressLine2 = addressLine2;
+    }
+    
+    public String getCity() {
+        return city;
+    }
+    
+    public void setCity(String city) {
+        this.city = city;
+    }
+    
+    public String getState() {
+        return state;
+    }
+    
+    public void setState(String state) {
+        this.state = state;
+    }
+    
+    public String getPostalCode() {
+        return postalCode;
+    }
+    
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+    
+    // Guardian field getters and setters
+    public String getGuardianName() {
+        return guardianName;
+    }
+    
+    public void setGuardianName(String guardianName) {
+        this.guardianName = guardianName;
+    }
+    
+    public String getGuardianAddress() {
+        return guardianAddress;
+    }
+    
+    public void setGuardianAddress(String guardianAddress) {
+        this.guardianAddress = guardianAddress;
+    }
+    
+    public String getGuardianPhone() {
+        return guardianPhone;
+    }
+    
+    public void setGuardianPhone(String guardianPhone) {
+        this.guardianPhone = guardianPhone;
     }
 } 

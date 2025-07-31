@@ -22,7 +22,17 @@ const WardenDashboard = () => {
     aadhaar_id: '',
     roll_no: '',
     stream: '',
-    branch: ''
+    branch: '',
+    // Address fields
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    // Guardian fields
+    guardian_name: '',
+    guardian_address: '',
+    guardian_phone: ''
   });
   
   const [roomAssignment, setRoomAssignment] = useState({
@@ -162,7 +172,17 @@ Please share these credentials with the student.`);
         aadhaar_id: '',
         roll_no: '',
         stream: '',
-        branch: ''
+        branch: '',
+        // Address fields
+        address_line1: '',
+        address_line2: '',
+        city: '',
+        state: '',
+        postal_code: '',
+        // Guardian fields
+        guardian_name: '',
+        guardian_address: '',
+        guardian_phone: ''
       });
     } else {
       setMessage(`Error: ${result.error}`);
@@ -501,7 +521,9 @@ Please share these credentials with the student.`);
                   className="refresh-btn"
                   onClick={() => setNewStudent({
                     full_name: '', email: '', phone: '', date_of_birth: '', gender: '',
-                    aadhaar_id: '', roll_no: '', stream: '', branch: ''
+                    aadhaar_id: '', roll_no: '', stream: '', branch: '',
+                    address_line1: '', address_line2: '', city: '', state: '', postal_code: '',
+                    guardian_name: '', guardian_address: '', guardian_phone: ''
                   })}
                   title="Clear Form"
                 >
@@ -696,6 +718,172 @@ Please share these credentials with the student.`);
                   </div>
                 </div>
 
+                {/* Address Information Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Address Information</h3>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="address_line1">Address Line 1 *</label>
+                      <input
+                        type="text"
+                        id="address_line1"
+                        value={newStudent.address_line1}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          address_line1: e.target.value
+                        })}
+                        required
+                        placeholder="Enter address line 1"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="address_line2">Address Line 2</label>
+                      <input
+                        type="text"
+                        id="address_line2"
+                        value={newStudent.address_line2}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          address_line2: e.target.value
+                        })}
+                        placeholder="Enter address line 2 (optional)"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="city">City *</label>
+                      <input
+                        type="text"
+                        id="city"
+                        value={newStudent.city}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          city: e.target.value
+                        })}
+                        required
+                        placeholder="Enter city"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="state">State *</label>
+                      <input
+                        type="text"
+                        id="state"
+                        value={newStudent.state}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          state: e.target.value
+                        })}
+                        required
+                        placeholder="Enter state"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="postal_code">Postal Code *</label>
+                      <input
+                        type="text"
+                        id="postal_code"
+                        value={newStudent.postal_code}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                          setNewStudent({
+                            ...newStudent,
+                            postal_code: value
+                          });
+                        }}
+                        required
+                        placeholder="Enter 6-digit postal code"
+                        pattern="^[0-9]{6}$"
+                        maxLength="6"
+                        title="Please enter a valid 6-digit postal code"
+                      />
+                      {newStudent.postal_code && newStudent.postal_code.length > 0 && newStudent.postal_code.length < 6 && (
+                        <span className="validation-error">Postal code must be 6 digits</span>
+                      )}
+                      {newStudent.postal_code && newStudent.postal_code.length === 6 && (
+                        <span className="validation-success">✓ Valid postal code</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guardian Information Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Guardian Information</h3>
+                  
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="guardian_name">Guardian Name *</label>
+                      <input
+                        type="text"
+                        id="guardian_name"
+                        value={newStudent.guardian_name}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          guardian_name: e.target.value
+                        })}
+                        required
+                        placeholder="Enter guardian's full name"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="guardian_phone">Guardian Phone *</label>
+                      <input
+                        type="tel"
+                        id="guardian_phone"
+                        value={newStudent.guardian_phone}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setNewStudent({
+                            ...newStudent,
+                            guardian_phone: value
+                          });
+                        }}
+                        required
+                        placeholder="Enter 10-digit mobile number"
+                        pattern="^[6-9][0-9]{9}$"
+                        maxLength="10"
+                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
+                      />
+                      {newStudent.guardian_phone && newStudent.guardian_phone.length > 0 && newStudent.guardian_phone.length < 10 && (
+                        <span className="validation-error">Phone number must be 10 digits</span>
+                      )}
+                      {newStudent.guardian_phone && newStudent.guardian_phone.length === 10 && !/^[6-9]/.test(newStudent.guardian_phone) && (
+                        <span className="validation-error">Phone number must start with 6, 7, 8, or 9</span>
+                      )}
+                      {newStudent.guardian_phone && newStudent.guardian_phone.length === 10 && /^[6-9][0-9]{9}$/.test(newStudent.guardian_phone) && (
+                        <span className="validation-success">✓ Valid phone number</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group full-width">
+                      <label htmlFor="guardian_address">Guardian Address *</label>
+                      <textarea
+                        id="guardian_address"
+                        value={newStudent.guardian_address}
+                        onChange={(e) => setNewStudent({
+                          ...newStudent,
+                          guardian_address: e.target.value
+                        })}
+                        required
+                        placeholder="Enter guardian's complete address"
+                        rows="3"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-actions">
                   <button type="submit" className="submit-button">
                     Create Student Account
@@ -712,7 +900,15 @@ Please share these credentials with the student.`);
                       aadhaar_id: '',
                       roll_no: '',
                       stream: '',
-                      branch: ''
+                      branch: '',
+                      address_line1: '',
+                      address_line2: '',
+                      city: '',
+                      state: '',
+                      postal_code: '',
+                      guardian_name: '',
+                      guardian_address: '',
+                      guardian_phone: ''
                     })}
                   >
                     Reset Form
@@ -1038,6 +1234,52 @@ Please share these credentials with the student.`);
                    <div className="detail-item">
                      <span className="label">Phone:</span>
                      <span className="value">{selectedStudent.phone}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Address Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">🏠 Address Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Address Line 1:</span>
+                     <span className="value">{selectedStudent.address_line1 || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Address Line 2:</span>
+                     <span className="value">{selectedStudent.address_line2 || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">City:</span>
+                     <span className="value">{selectedStudent.city || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">State:</span>
+                     <span className="value">{selectedStudent.state || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Postal Code:</span>
+                     <span className="value">{selectedStudent.postal_code || 'N/A'}</span>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Guardian Information Section */}
+               <div className="details-section">
+                 <h4 className="section-title">👨‍👩‍👦 Guardian Information</h4>
+                 <div className="details-grid">
+                   <div className="detail-item">
+                     <span className="label">Guardian Name:</span>
+                     <span className="value">{selectedStudent.guardian_name || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item">
+                     <span className="label">Guardian Phone:</span>
+                     <span className="value">{selectedStudent.guardian_phone || 'N/A'}</span>
+                   </div>
+                   <div className="detail-item full-width">
+                     <span className="label">Guardian Address:</span>
+                     <span className="value">{selectedStudent.guardian_address || 'N/A'}</span>
                    </div>
                  </div>
                </div>

@@ -53,7 +53,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>Hostel Management System</h1>
+          <h1>HMS</h1>
           <p>Sign in to your account</p>
         </div>
         

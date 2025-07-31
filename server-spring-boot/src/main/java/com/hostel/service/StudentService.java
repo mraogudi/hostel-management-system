@@ -10,7 +10,6 @@ import com.hostel.repository.UserRepository;
 import com.hostel.repository.BedRepository;
 import com.hostel.repository.RoomRepository;
 import com.hostel.repository.RoomChangeRequestRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -25,30 +24,33 @@ import java.util.stream.Collectors;
 @Service
 public class StudentService {
     
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
     
-    @Autowired
-    private BedRepository bedRepository;
+    private final BedRepository bedRepository;
     
-    @Autowired
-    private RoomRepository roomRepository;
+    private final RoomRepository roomRepository;
     
-    @Autowired
-    private RoomChangeRequestRepository roomChangeRequestRepository;
+    private final RoomChangeRequestRepository roomChangeRequestRepository;
     
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
     
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom random = new SecureRandom();
-    
+
+    public StudentService(UserRepository userRepository, BedRepository bedRepository, RoomRepository roomRepository, RoomChangeRequestRepository roomChangeRequestRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.bedRepository = bedRepository;
+        this.roomRepository = roomRepository;
+        this.roomChangeRequestRepository = roomChangeRequestRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
     public Map<String, Object> createStudent(CreateStudentRequest request) {
         // Validation
         validateStudentRequest(request);
         
         // Generate password
-        String password = generateRandomPassword(8);
+        String password = generateRandomPassword();
         String hashedPassword = passwordEncoder.encode(password);
         
         // Create user with roll number as username
@@ -64,22 +66,22 @@ public class StudentService {
             request.getAadhaarId(),
             request.getRollNo(),
             request.getStream(),
-            request.getBranch()
+            request.getBranch(),
+            request.getAddressLine1(),
+            request.getAddressLine2(),
+            request.getCity(),
+            request.getState(),
+            request.getPostalCode(),
+            request.getGuardianName(),
+            request.getGuardianAddress(),
+            request.getGuardianPhone()
         );
         
         User savedStudent = userRepository.save(newStudent);
         
         // Prepare response
-        Map<String, Object> studentInfo = new HashMap<>();
-        studentInfo.put("id", savedStudent.getId());
-        studentInfo.put("username", savedStudent.getUsername());
-        studentInfo.put("full_name", savedStudent.getFullName());
-        studentInfo.put("email", savedStudent.getEmail());
-        studentInfo.put("phone", savedStudent.getPhone());
-        studentInfo.put("roll_no", savedStudent.getRollNo());
-        studentInfo.put("stream", savedStudent.getStream());
-        studentInfo.put("branch", savedStudent.getBranch());
-        
+        Map<String, Object> studentInfo = getStringObjectMap(savedStudent);
+
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Student created successfully");
         response.put("credentials", Map.of(
@@ -90,7 +92,20 @@ public class StudentService {
         
         return response;
     }
-    
+
+    private static Map<String, Object> getStringObjectMap(User savedStudent) {
+        Map<String, Object> studentInfo = new HashMap<>();
+        studentInfo.put("id", savedStudent.getId());
+        studentInfo.put("username", savedStudent.getUsername());
+        studentInfo.put("full_name", savedStudent.getFullName());
+        studentInfo.put("email", savedStudent.getEmail());
+        studentInfo.put("phone", savedStudent.getPhone());
+        studentInfo.put("roll_no", savedStudent.getRollNo());
+        studentInfo.put("stream", savedStudent.getStream());
+        studentInfo.put("branch", savedStudent.getBranch());
+        return studentInfo;
+    }
+
     public void assignRoom(String rollNumber, String roomId, Integer bedNumber) {
         // First, find the student by roll number
         Optional<User> studentOptional = userRepository.findByRollNo(rollNumber);
@@ -486,9 +501,9 @@ public class StudentService {
         }
     }
     
-    private String generateRandomPassword(int length) {
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
+    private String generateRandomPassword() {
+        StringBuilder sb = new StringBuilder(8);
+        for (int i = 0; i < 8; i++) {
             sb.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
         }
         return sb.toString();

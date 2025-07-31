@@ -51,6 +51,31 @@ public class User {
     
     private String branch;
     
+    // Address fields
+    @JsonProperty("address_line1")
+    private String addressLine1;
+    
+    @JsonProperty("address_line2")
+    private String addressLine2;
+    
+    private String city;
+    
+    private String state;
+    
+    @JsonProperty("postal_code")
+    private String postalCode;
+    
+    // Guardian fields
+    @JsonProperty("guardian_name")
+    private String guardianName;
+    
+    @JsonProperty("guardian_address")
+    private String guardianAddress;
+    
+    @JsonProperty("guardian_phone")
+    @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Guardian phone must be a valid 10-digit Indian mobile number")
+    private String guardianPhone;
+    
     @CreatedDate
     @JsonProperty("created_at")
     private LocalDateTime createdAt;
@@ -71,9 +96,11 @@ public class User {
         this.phone = phone;
     }
     
-    // Constructor for students with all fields
+    // Constructor for students with all fields including address and guardian
     public User(String username, String password, String role, String fullName, String email, String phone,
-                LocalDate dateOfBirth, String gender, String aadhaarId, String rollNo, String stream, String branch) {
+                LocalDate dateOfBirth, String gender, String aadhaarId, String rollNo, String stream, String branch,
+                String addressLine1, String addressLine2, String city, String state, String postalCode,
+                String guardianName, String guardianAddress, String guardianPhone) {
         this.username = username;
         this.password = password;
         this.role = role;
@@ -86,6 +113,14 @@ public class User {
         this.rollNo = rollNo;
         this.stream = stream;
         this.branch = branch;
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+        this.city = city;
+        this.state = state;
+        this.postalCode = postalCode;
+        this.guardianName = guardianName;
+        this.guardianAddress = guardianAddress;
+        this.guardianPhone = guardianPhone;
     }
     
     // Getters and Setters
@@ -207,5 +242,71 @@ public class User {
     
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    
+    // Address field getters and setters
+    public String getAddressLine1() {
+        return addressLine1;
+    }
+    
+    public void setAddressLine1(String addressLine1) {
+        this.addressLine1 = addressLine1;
+    }
+    
+    public String getAddressLine2() {
+        return addressLine2;
+    }
+    
+    public void setAddressLine2(String addressLine2) {
+        this.addressLine2 = addressLine2;
+    }
+    
+    public String getCity() {
+        return city;
+    }
+    
+    public void setCity(String city) {
+        this.city = city;
+    }
+    
+    public String getState() {
+        return state;
+    }
+    
+    public void setState(String state) {
+        this.state = state;
+    }
+    
+    public String getPostalCode() {
+        return postalCode;
+    }
+    
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+    
+    // Guardian field getters and setters
+    public String getGuardianName() {
+        return guardianName;
+    }
+    
+    public void setGuardianName(String guardianName) {
+        this.guardianName = guardianName;
+    }
+    
+    public String getGuardianAddress() {
+        return guardianAddress;
+    }
+    
+    public void setGuardianAddress(String guardianAddress) {
+        this.guardianAddress = guardianAddress;
+    }
+    
+    public String getGuardianPhone() {
+        return guardianPhone;
+    }
+    
+    public void setGuardianPhone(String guardianPhone) {
+        this.guardianPhone = guardianPhone;
     }
 } 
