@@ -61,7 +61,7 @@ const WardenDashboard = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [selectedRoomDetails, setSelectedRoomDetails] = useState(null);
   const [showBedLayout, setShowBedLayout] = useState(false);
-  const [unassignedStudents, setUnassignedStudents] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -75,13 +75,15 @@ const WardenDashboard = () => {
     }
   }, [activeTab]);
 
-  // Fetch unassigned students when assign tab is activated
+  // Fetch all students when assign tab is activated
   useEffect(() => {
     if (activeTab === 'assign') {
-      console.log('Assign tab activated, fetching unassigned students...');
-      fetchUnassignedStudents();
+      console.log('Assign tab activated, fetching all students...');
+      fetchAllStudentsForAssignment();
     }
   }, [activeTab]);
+
+
 
   const fetchStudentsData = async () => {
     console.log('Fetching students data specifically...');
@@ -97,42 +99,31 @@ const WardenDashboard = () => {
     }
   };
 
-  const fetchUnassignedStudents = async () => {
+  const fetchAllStudentsForAssignment = async () => {
     try {
-      console.log('Fetching unassigned students...');
+      console.log('Fetching all students for room assignment...');
       
-      // Try the unassigned students endpoint first
-      const result = await apiCall('GET', '/api/warden/unassigned-students');
+      // Fetch all students
+      const allStudentsResult = await apiCall('GET', '/api/warden/students');
       
-      if (result.success && result.data && result.data.length > 0) {
-        const students = result.data || [];
-        setUnassignedStudents(students);
-        console.log('Unassigned students loaded:', students.length, 'students');
+      if (allStudentsResult.success) {
+        const students = allStudentsResult.data || [];
+        console.log('All students fetched:', students.length);
+        
+        // Filter to include only students with roll numbers and names
+        const validStudents = students.filter(student => {
+          return student.roll_no && student.full_name;
+        });
+        
+        setAllStudents(validStudents);
+        console.log('Valid students loaded:', validStudents.length, 'students');
       } else {
-        console.log('Unassigned students endpoint failed, falling back to filtering all students');
-        
-        // Fallback: fetch all students and filter
-        const allStudentsResult = await apiCall('GET', '/api/warden/students');
-        
-        if (allStudentsResult.success) {
-          const allStudents = allStudentsResult.data || [];
-          console.log('All students fetched:', allStudents.length);
-          
-          // Filter students without room assignments
-          const unassigned = allStudents.filter(student => {
-            return !student.room_id && !student.room_number && student.roll_no && student.full_name;
-          });
-          
-          setUnassignedStudents(unassigned);
-          console.log('Filtered unassigned students:', unassigned.length, 'students');
-        } else {
-          console.error('Failed to fetch all students:', allStudentsResult.error);
-          setUnassignedStudents([]);
-        }
+        console.error('Failed to fetch all students:', allStudentsResult.error);
+        setAllStudents([]);
       }
     } catch (error) {
-      console.error('Error fetching unassigned students:', error);
-      setUnassignedStudents([]);
+      console.error('Error fetching all students:', error);
+      setAllStudents([]);
     }
   };
 
@@ -179,8 +170,8 @@ const WardenDashboard = () => {
       setMessage('Error loading dashboard data');
     }
     
-    // Fetch unassigned students for room assignment
-    await fetchUnassignedStudents();
+    // Fetch all students for room assignment
+    await fetchAllStudentsForAssignment();
     
     setLoading(false);
     console.log('=== fetchData completed ===');
@@ -247,6 +238,14 @@ Please share these credentials with the student.`);
   const handleRoomAssignment = async (e) => {
     e.preventDefault();
     
+    // Check if student is already assigned to a room
+    const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
+    if (selectedStudent && (selectedStudent.room_id || selectedStudent.room_number)) {
+      setMessage(`Error: Student ${roomAssignment.studentId} is already assigned to Room ${selectedStudent.room_number || selectedStudent.room_id}. Please select an unassigned student.`);
+      setTimeout(() => setMessage(''), 8000);
+      return;
+    }
+    
     const result = await apiCall('POST', '/api/warden/assign-room', roomAssignment);
     
     if (result.success) {
@@ -256,6 +255,7 @@ Please share these credentials with the student.`);
       setShowBedLayout(false);
       setAvailableBeds([]);
       fetchData(); // Refresh data
+      fetchAllStudentsForAssignment(); // Refresh student list
     } else {
       setMessage(`Error: ${result.error}`);
     }
@@ -569,17 +569,7 @@ Please share these credentials with the student.`);
   const BedLayoutWarden = ({ roomDetails }) => {
     if (!roomDetails || !roomDetails.beds) return null;
 
-    const createBedGrid = () => {
-      const beds = roomDetails.beds.sort((a, b) => a.bed_number - b.bed_number);
-      const bedsPerRow = Math.ceil(Math.sqrt(roomDetails.capacity));
-      const rows = [];
-      
-      for (let i = 0; i < beds.length; i += bedsPerRow) {
-        rows.push(beds.slice(i, i + bedsPerRow));
-      }
-      
-      return rows;
-    };
+
 
     const getBedStatus = (bed) => {
       if (bed.status === 'occupied') return 'occupied';
@@ -608,87 +598,48 @@ Please share these credentials with the student.`);
             </div>
             <span className="room-mode-indicator selectable">Select a bed for assignment</span>
           </div>
-          <button 
-            className="close-layout-btn"
-            onClick={() => {
-              setShowBedLayout(false);
-              setSelectedRoomDetails(null);
-              setRoomAssignment({
-                ...roomAssignment,
-                roomId: '',
-                bedNumber: ''
-              });
-            }}
-          >
-            ✕
-          </button>
+
         </div>
         
-        <div className="bed-grid">
-          {createBedGrid().map((row, rowIndex) => (
-            <div key={rowIndex} className="bed-row">
-              {row.map((bed) => (
-                <div
-                  key={bed.bed_number}
-                  className={`bed-seat ${getBedStatus(bed)}`}
-                  onClick={() => bed.status === 'available' && handleBedSelection(bed.bed_number)}
-                  title={
-                    bed.status === 'occupied' 
-                      ? `Bed ${bed.bed_number} - OCCUPIED by ${bed.student_name || 'Unknown Student'}`
-                      : `Bed ${bed.bed_number} - AVAILABLE - Click to assign`
-                  }
-                  style={{ cursor: bed.status === 'available' ? 'pointer' : 'default' }}
-                >
-                  <div className="bed-number">#{bed.bed_number}</div>
-                  <div className="bed-status-label">
-                    {bed.status === 'occupied' ? (
-                      <span className="status-occupied">OCCUPIED</span>
-                    ) : (
-                      <span className="status-available">AVAILABLE</span>
-                    )}
-                  </div>
-                  {bed.status === 'occupied' && (
-                    <div className="occupant-name">
-                      {bed.student_name ? bed.student_name.split(' ')[0] : 'Student'}
-                    </div>
+        <div className="bed-list-inline">
+          {roomDetails.beds
+            .sort((a, b) => a.bed_number - b.bed_number)
+            .map(bed => (
+              <div
+                key={bed.bed_number}
+                className={`bed-item-inline ${getBedStatus(bed)}`}
+                onClick={() => bed.status === 'available' && handleBedSelection(bed.bed_number)}
+                style={{ cursor: bed.status === 'available' ? 'pointer' : 'default' }}
+              >
+                <div className="bed-info">
+                  <span className="bed-number">Bed #{bed.bed_number}</span>
+                  <span className={`bed-status ${bed.status}`}>
+                    {bed.status === 'occupied' ? 'OCCUPIED' : 'AVAILABLE'}
+                  </span>
+                  {bed.status === 'occupied' && bed.student_name && (
+                    <span className="student-info">by {bed.student_name}</span>
                   )}
                 </div>
-              ))}
-            </div>
-          ))}
+                {bed.status === 'available' && (
+                  <button className="select-bed-btn" type="button">
+                    Select This Bed
+                  </button>
+                )}
+              </div>
+            ))}
         </div>
 
-        {/* Detailed bed status breakdown */}
-        <div className="bed-details-section">
-          <h4>Bed-by-Bed Status:</h4>
-          <div className="bed-status-list">
-            {roomDetails.beds
-              .sort((a, b) => a.bed_number - b.bed_number)
-              .map(bed => (
-                <div key={bed.bed_number} className="bed-status-item">
-                  <span className="bed-label">Bed #{bed.bed_number}:</span>
-                  <span className={`status-text ${bed.status}`}>
-                    {bed.status === 'occupied' 
-                      ? `OCCUPIED by ${bed.student_name || 'Student'}` 
-                      : 'AVAILABLE'}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-
-        <div className="bed-legend">
-          <div className="legend-item">
-            <div className="legend-color available"></div>
-            <span>Available ({roomDetails.beds.filter(bed => bed.status === 'available').length})</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color occupied"></div>
-            <span>Occupied ({roomDetails.beds.filter(bed => bed.status === 'occupied').length})</span>
-          </div>
-          <div className="legend-item">
-            <div className="legend-color selected"></div>
-            <span>Selected for Assignment</span>
+        <div className="bed-summary-inline">
+          <div className="summary-stats">
+            <span className="stat-item available">
+              ✅ {roomDetails.beds.filter(bed => bed.status === 'available').length} Available
+            </span>
+            <span className="stat-item occupied">
+              ❌ {roomDetails.beds.filter(bed => bed.status === 'occupied').length} Occupied
+            </span>
+            <span className="stat-item total">
+              🛏️ {roomDetails.beds.length} Total Beds
+            </span>
           </div>
         </div>
       </div>
@@ -1299,7 +1250,7 @@ Please share these credentials with the student.`);
                   <button 
                     type="button"
                     className="refresh-students-btn"
-                    onClick={fetchUnassignedStudents}
+                    onClick={fetchAllStudentsForAssignment}
                     title="Refresh Student List"
                   >
                     🔄 Refresh Students
@@ -1316,25 +1267,25 @@ Please share these credentials with the student.`);
                     })}
                     required
                     className="student-dropdown"
-                    disabled={unassignedStudents.length === 0}
+                    disabled={allStudents.length === 0}
                   >
                     <option value="">
-                      {unassignedStudents.length === 0 
-                        ? "No unassigned students available" 
-                        : `Select from ${unassignedStudents.length} unassigned students...`}
+                      {allStudents.length === 0 
+                        ? "No students available" 
+                        : `Select from ${allStudents.length} students...`}
                     </option>
-                    {unassignedStudents
+                    {allStudents
                       .sort((a, b) => a.roll_no?.localeCompare(b.roll_no) || 0)
                       .map(student => (
                       <option key={student.id} value={student.roll_no}>
-                        {student.roll_no || 'NO-ROLL'} - {student.full_name || 'Unknown Name'} | {student.stream || ''} {student.branch || ''}
+                        {student.roll_no || 'NO-ROLL'} - {student.full_name || 'Unknown Name'}{(student.room_id || student.room_number) && ' [ASSIGNED]'}
                       </option>
                     ))}
                   </select>
                   <small className="field-note">
-                    {unassignedStudents.length} unassigned students available
-                    {unassignedStudents.length === 0 && (
-                      <span className="error-note"> - All students have been assigned rooms</span>
+                    {allStudents.length} students available
+                    {allStudents.length === 0 && (
+                      <span className="error-note"> - No students found in the system</span>
                     )}
                   </small>
                 </div>
@@ -1343,7 +1294,7 @@ Please share these credentials with the student.`);
               {/* Visual Room Selection */}
               <div className="visual-room-selection-warden">
                 <h3>Select Room</h3>
-                <p className="selection-hint">Click on any available room to view bed layout and make assignment</p>
+                <p className="selection-hint">Click on any available room to see bed layout below and make assignment</p>
                 <div className="rooms-grid-warden">
                   {rooms
                     .filter(room => room.available_beds > 0)
@@ -1358,53 +1309,95 @@ Please share these credentials with the student.`);
                     <p>No rooms with available beds found.</p>
                   </div>
                 )}
-              </div>
 
-              {/* Bed Layout Modal */}
-              {showBedLayout && selectedRoomDetails && (
-                <div className="bed-layout-overlay">
-                  <BedLayoutWarden roomDetails={selectedRoomDetails} />
-                </div>
-              )}
+                {/* Inline Bed Layout */}
+                {showBedLayout && selectedRoomDetails && (
+                  <div className="bed-layout-inline">
+                    <div className="bed-layout-inline-header">
+                      <h4>Select a Bed from Room {selectedRoomDetails.room_number}</h4>
+                      <button 
+                        className="clear-selection-btn"
+                        onClick={() => {
+                          setShowBedLayout(false);
+                          setSelectedRoomDetails(null);
+                          setRoomAssignment({
+                            ...roomAssignment,
+                            roomId: '',
+                            bedNumber: ''
+                          });
+                        }}
+                        title="Clear room selection"
+                      >
+                        ✕ Clear Selection
+                      </button>
+                    </div>
+                    <BedLayoutWarden roomDetails={selectedRoomDetails} />
+                  </div>
+                )}
+              </div>
 
               {/* Assignment Summary and Submit */}
               <form onSubmit={handleRoomAssignment} className="assignment-summary-form">
                 {roomAssignment.studentId && roomAssignment.roomId && roomAssignment.bedNumber && (
                   <div className="assignment-summary">
                     <h4>Assignment Summary</h4>
-                    <div className="summary-details">
-                      <div className="summary-item">
-                        <strong>Student:</strong> 
-                        <span className="student-details">
-                          <span className="roll-number">{roomAssignment.studentId}</span>
-                          <span className="student-name">
-                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.full_name || 'Unknown Student'}
-                          </span>
-                          <span className="student-stream">
-                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.stream || ''} 
-                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.branch || ''}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="summary-item">
-                        <strong>Room:</strong> 
-                        Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor}
-                      </div>
-                      <div className="summary-item">
-                        <strong>Bed:</strong> 
-                        Bed #{roomAssignment.bedNumber}
-                      </div>
-                    </div>
+                    {(() => {
+                      const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
+                      const isAlreadyAssigned = selectedStudent && (selectedStudent.room_id || selectedStudent.room_number);
+                      
+                      return (
+                        <>
+                          {isAlreadyAssigned && (
+                            <div className="assignment-warning">
+                              ⚠️ <strong>Warning:</strong> This student is already assigned to Room {selectedStudent.room_number || selectedStudent.room_id}. 
+                              Please select an unassigned student.
+                            </div>
+                          )}
+                          <div className="summary-details">
+                            <div className="summary-item">
+                              <strong>Student:</strong> 
+                              <span className="student-details">
+                                <span className="roll-number">{roomAssignment.studentId}</span>
+                                <span className="student-name">
+                                  {selectedStudent?.full_name || 'Unknown Student'}
+                                </span>
+                                <span className="student-stream">
+                                  {selectedStudent?.stream || ''} 
+                                  {selectedStudent?.branch || ''}
+                                </span>
+                                {isAlreadyAssigned && <span className="already-assigned-badge">[ALREADY ASSIGNED]</span>}
+                              </span>
+                            </div>
+                            <div className="summary-item">
+                              <strong>Room:</strong> 
+                              Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor}
+                            </div>
+                            <div className="summary-item">
+                              <strong>Bed:</strong> 
+                              Bed #{roomAssignment.bedNumber}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
 
-                <button 
-                  type="submit" 
-                  className="submit-button"
-                  disabled={!roomAssignment.studentId || !roomAssignment.roomId || !roomAssignment.bedNumber}
-                >
-                  Assign Room to Student
-                </button>
+                {(() => {
+                  const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
+                  const isAlreadyAssigned = selectedStudent && (selectedStudent.room_id || selectedStudent.room_number);
+                  const isFormValid = roomAssignment.studentId && roomAssignment.roomId && roomAssignment.bedNumber && !isAlreadyAssigned;
+                  
+                  return (
+                    <button 
+                      type="submit" 
+                      className="submit-button"
+                      disabled={!isFormValid}
+                    >
+                      {isAlreadyAssigned ? 'Student Already Assigned' : 'Assign Room to Student'}
+                    </button>
+                  );
+                })()}
               </form>
             </div>
           )}

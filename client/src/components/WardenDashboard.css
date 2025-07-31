@@ -1,6 +1,404 @@
 /* Inherit dashboard styles from StudentDashboard but add warden-specific styles */
 @import './StudentDashboard.css';
 
+/* Warden-specific bed styling - bed icon instead of squares */
+.bed-layout-container .bed-seat {
+  width: 100px;
+  height: 60px;
+  border-radius: 15px 15px 8px 8px;
+  border: 3px solid;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 600;
+  position: relative;
+  text-align: center;
+  padding: 4px;
+  background-image: linear-gradient(to bottom, 
+    transparent 0%, 
+    transparent 20%, 
+    rgba(0,0,0,0.1) 20%, 
+    rgba(0,0,0,0.1) 25%, 
+    transparent 25%);
+}
+
+.bed-layout-container .bed-seat::before {
+  content: '🛏️';
+  font-size: 20px;
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.7;
+}
+
+.bed-layout-container .bed-seat::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 10%;
+  right: 10%;
+  height: 8px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 0 0 8px 8px;
+  z-index: -1;
+}
+
+.bed-layout-container .bed-seat.available {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border-color: #27ae60;
+  color: #155724;
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
+}
+
+.bed-layout-container .bed-seat.available::before {
+  color: #27ae60;
+}
+
+.bed-layout-container .bed-seat.available:hover {
+  background: linear-gradient(135deg, #c3e6cb 0%, #a8d5aa 100%);
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 6px 16px rgba(39, 174, 96, 0.3);
+}
+
+.bed-layout-container .bed-seat.occupied {
+  background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+  border-color: #e74c3c;
+  color: #721c24;
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
+}
+
+.bed-layout-container .bed-seat.occupied::before {
+  color: #e74c3c;
+  content: '🛌';
+}
+
+.bed-layout-container .bed-seat.selected {
+  background: linear-gradient(135deg, #cce5ff 0%, #a8c8ff 100%);
+  border-color: #667eea;
+  color: #2c5282;
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.bed-layout-container .bed-seat.selected::before {
+  color: #667eea;
+  content: '🛏️';
+}
+
+.bed-layout-container .bed-number {
+  margin-top: 18px;
+  font-size: 0.8em;
+  font-weight: 700;
+  z-index: 2;
+}
+
+.bed-layout-container .bed-status-label {
+  font-size: 0.65em;
+  font-weight: 500;
+  margin-top: 2px;
+  z-index: 2;
+}
+
+.bed-layout-container .occupant-name {
+  font-size: 0.6em;
+  font-weight: 400;
+  margin-top: 1px;
+  opacity: 0.8;
+  z-index: 2;
+}
+
+/* Inline Bed Layout Styling for Warden Dashboard */
+.bed-layout-inline {
+  margin-top: 30px;
+  padding: 25px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bed-layout-inline .bed-layout-container {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: none;
+  max-height: none;
+  overflow-y: visible;
+  box-shadow: none;
+  animation: none;
+}
+
+.bed-layout-inline .bed-layout-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin: -25px -25px 25px -25px;
+}
+
+.bed-layout-inline .bed-layout-header h3 {
+  color: white;
+  margin: 0 0 10px 0;
+}
+
+.bed-layout-inline .room-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.bed-layout-inline .summary-item {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.bed-layout-inline .room-mode-indicator {
+  background: rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-top: 15px;
+  display: inline-block;
+}
+
+.bed-layout-inline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.bed-layout-inline-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.clear-selection-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clear-selection-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+}
+
+/* Assignment Validation Styles */
+.assignment-warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  color: #856404;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assignment-warning strong {
+  color: #856404;
+}
+
+.already-assigned-badge {
+  background: #dc3545;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7em;
+  font-weight: 600;
+  margin-left: 8px;
+  display: inline-block;
+}
+
+.submit-button:disabled {
+  background: #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.submit-button:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Inline Bed List Styling */
+.bed-list-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.bed-item-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border: 2px solid;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.bed-item-inline.available {
+  border-color: #27ae60;
+  background: linear-gradient(135deg, #d4edda 0%, #f8fff9 100%);
+}
+
+.bed-item-inline.available:hover {
+  border-color: #219a52;
+  background: linear-gradient(135deg, #c3e6cb 0%, #f0fff4 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+  cursor: pointer;
+}
+
+.bed-item-inline.occupied {
+  border-color: #e74c3c;
+  background: linear-gradient(135deg, #f8d7da 0%, #fff8f8 100%);
+  cursor: not-allowed;
+}
+
+.bed-item-inline.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #cce5ff 0%, #f0f8ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.bed-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.bed-info .bed-number {
+  font-weight: 700;
+  font-size: 1.1em;
+  color: #2c3e50;
+  min-width: 80px;
+}
+
+.bed-info .bed-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85em;
+  text-transform: uppercase;
+}
+
+.bed-info .bed-status.available {
+  background: #27ae60;
+  color: white;
+}
+
+.bed-info .bed-status.occupied {
+  background: #e74c3c;
+  color: white;
+}
+
+.bed-info .student-info {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.select-bed-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-bed-btn:hover {
+  background: #5a67d8;
+  transform: scale(1.05);
+}
+
+/* Bed Summary Inline */
+.bed-summary-inline {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-item.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.stat-item.occupied {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.stat-item.total {
+  background: #cce5ff;
+  color: #2c5282;
+}
+
 /* Stats Grid */
 .stats-grid {
   display: grid;
