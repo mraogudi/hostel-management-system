@@ -59,6 +59,9 @@ const WardenDashboard = () => {
   const [confirmAction, setConfirmAction] = useState({ type: '', request: null });
 
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedRoomDetails, setSelectedRoomDetails] = useState(null);
+  const [showBedLayout, setShowBedLayout] = useState(false);
+  const [unassignedStudents, setUnassignedStudents] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -69,6 +72,14 @@ const WardenDashboard = () => {
     if (activeTab === 'students' && students.length === 0) {
       console.log('Students tab activated, fetching students...');
       fetchStudentsData();
+    }
+  }, [activeTab]);
+
+  // Fetch unassigned students when assign tab is activated
+  useEffect(() => {
+    if (activeTab === 'assign') {
+      console.log('Assign tab activated, fetching unassigned students...');
+      fetchUnassignedStudents();
     }
   }, [activeTab]);
 
@@ -83,6 +94,45 @@ const WardenDashboard = () => {
     } else {
       console.error('Failed to fetch students:', studentsResult.error);
       setMessage(`Error fetching students: ${studentsResult.error}`);
+    }
+  };
+
+  const fetchUnassignedStudents = async () => {
+    try {
+      console.log('Fetching unassigned students...');
+      
+      // Try the unassigned students endpoint first
+      const result = await apiCall('GET', '/api/warden/unassigned-students');
+      
+      if (result.success && result.data && result.data.length > 0) {
+        const students = result.data || [];
+        setUnassignedStudents(students);
+        console.log('Unassigned students loaded:', students.length, 'students');
+      } else {
+        console.log('Unassigned students endpoint failed, falling back to filtering all students');
+        
+        // Fallback: fetch all students and filter
+        const allStudentsResult = await apiCall('GET', '/api/warden/students');
+        
+        if (allStudentsResult.success) {
+          const allStudents = allStudentsResult.data || [];
+          console.log('All students fetched:', allStudents.length);
+          
+          // Filter students without room assignments
+          const unassigned = allStudents.filter(student => {
+            return !student.room_id && !student.room_number && student.roll_no && student.full_name;
+          });
+          
+          setUnassignedStudents(unassigned);
+          console.log('Filtered unassigned students:', unassigned.length, 'students');
+        } else {
+          console.error('Failed to fetch all students:', allStudentsResult.error);
+          setUnassignedStudents([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching unassigned students:', error);
+      setUnassignedStudents([]);
     }
   };
 
@@ -128,6 +178,9 @@ const WardenDashboard = () => {
       console.error('Error in fetchData:', error);
       setMessage('Error loading dashboard data');
     }
+    
+    // Fetch unassigned students for room assignment
+    await fetchUnassignedStudents();
     
     setLoading(false);
     console.log('=== fetchData completed ===');
@@ -199,6 +252,9 @@ Please share these credentials with the student.`);
     if (result.success) {
       setMessage('Room assigned successfully!');
       setRoomAssignment({ studentId: '', roomId: '', bedNumber: '' });
+      setSelectedRoomDetails(null);
+      setShowBedLayout(false);
+      setAvailableBeds([]);
       fetchData(); // Refresh data
     } else {
       setMessage(`Error: ${result.error}`);
@@ -292,6 +348,39 @@ Please share these credentials with the student.`);
       setAvailableBeds([]);
       setBedsLoading(false);
     }
+  };
+
+  // Handle visual room selection for assignment
+  const handleVisualRoomSelection = async (room) => {
+    if (room.available_beds === 0) return;
+    
+    setRoomAssignment({
+      ...roomAssignment,
+      roomId: room.id,
+      bedNumber: ''
+    });
+
+    setBedsLoading(true);
+    try {
+      const result = await apiCall('GET', `/api/rooms/${room.id}`);
+      if (result.success && result.data) {
+        setSelectedRoomDetails(result.data);
+        setShowBedLayout(true);
+        const beds = await getAvailableBeds(room.id);
+        setAvailableBeds(beds);
+      }
+    } catch (error) {
+      console.error('Error fetching room details:', error);
+    }
+    setBedsLoading(false);
+  };
+
+  // Handle bed selection in visual interface
+  const handleBedSelection = (bedNumber) => {
+    setRoomAssignment({
+      ...roomAssignment,
+      bedNumber: bedNumber
+    });
   };
 
   const getRoomStatistics = () => {
@@ -412,6 +501,199 @@ Please share these credentials with the student.`);
   }
 
   const stats = getRoomStatistics();
+
+  // Visual Components for Room Assignment
+  const RoomCardWarden = ({ room }) => {
+    const isSelected = roomAssignment.roomId === room.id;
+    const isUnavailable = room.available_beds === 0;
+    const occupiedBeds = room.capacity - room.available_beds;
+    
+    return (
+      <div 
+        className={`room-card-visual-warden ${isSelected ? 'selected' : ''} ${isUnavailable ? 'unavailable' : ''}`}
+        onClick={() => !isUnavailable && handleVisualRoomSelection(room)}
+        style={{ cursor: isUnavailable ? 'not-allowed' : 'pointer' }}
+      >
+        <div className="room-card-header">
+          <h4>Room {room.room_number}</h4>
+          <span className="floor-tag">Floor {room.floor}</span>
+        </div>
+        <div className="room-card-info">
+          <div className="info-item">
+            <span className="label">Type:</span>
+            <span className="value">{room.room_type}</span>
+          </div>
+          <div className="info-item">
+            <span className="label">Capacity:</span>
+            <span className="value">{room.capacity} beds</span>
+          </div>
+          <div className="info-item">
+            <span className="label">Occupied:</span>
+            <span className={`value ${occupiedBeds > 0 ? 'occupied' : 'empty'}`}>
+              {occupiedBeds} / {room.capacity} beds
+            </span>
+          </div>
+          <div className="info-item">
+            <span className="label">Available:</span>
+            <span className={`value ${room.available_beds === 0 ? 'unavailable' : 'available'}`}>
+              {room.available_beds} beds
+            </span>
+          </div>
+        </div>
+        <div className="room-card-status">
+          {isUnavailable ? (
+            <span className="status-badge unavailable">Full</span>
+          ) : occupiedBeds > 0 ? (
+            <span className="status-badge partial">Partially Occupied</span>
+          ) : (
+            <span className="status-badge available">Available</span>
+          )}
+        </div>
+        
+        {/* Occupancy indicator */}
+        <div className="occupancy-indicator">
+          <div className="occupancy-bar">
+            <div 
+              className="occupancy-fill" 
+              style={{ width: `${(occupiedBeds / room.capacity) * 100}%` }}
+            ></div>
+          </div>
+          <span className="occupancy-text">
+            {Math.round((occupiedBeds / room.capacity) * 100)}% occupied
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const BedLayoutWarden = ({ roomDetails }) => {
+    if (!roomDetails || !roomDetails.beds) return null;
+
+    const createBedGrid = () => {
+      const beds = roomDetails.beds.sort((a, b) => a.bed_number - b.bed_number);
+      const bedsPerRow = Math.ceil(Math.sqrt(roomDetails.capacity));
+      const rows = [];
+      
+      for (let i = 0; i < beds.length; i += bedsPerRow) {
+        rows.push(beds.slice(i, i + bedsPerRow));
+      }
+      
+      return rows;
+    };
+
+    const getBedStatus = (bed) => {
+      if (bed.status === 'occupied') return 'occupied';
+      if (roomAssignment.bedNumber === bed.bed_number) return 'selected';
+      return 'available';
+    };
+
+    return (
+      <div className="bed-layout-container">
+        <div className="bed-layout-header">
+          <div>
+            <h3>Room {roomDetails.room_number} - Floor {roomDetails.floor}</h3>
+            <div className="room-summary">
+              <span className="summary-item">
+                <strong>Type:</strong> {roomDetails.room_type}
+              </span>
+              <span className="summary-item">
+                <strong>Capacity:</strong> {roomDetails.capacity} beds
+              </span>
+              <span className="summary-item">
+                <strong>Occupied:</strong> {roomDetails.beds.filter(bed => bed.status === 'occupied').length} beds
+              </span>
+              <span className="summary-item">
+                <strong>Available:</strong> {roomDetails.beds.filter(bed => bed.status === 'available').length} beds
+              </span>
+            </div>
+            <span className="room-mode-indicator selectable">Select a bed for assignment</span>
+          </div>
+          <button 
+            className="close-layout-btn"
+            onClick={() => {
+              setShowBedLayout(false);
+              setSelectedRoomDetails(null);
+              setRoomAssignment({
+                ...roomAssignment,
+                roomId: '',
+                bedNumber: ''
+              });
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="bed-grid">
+          {createBedGrid().map((row, rowIndex) => (
+            <div key={rowIndex} className="bed-row">
+              {row.map((bed) => (
+                <div
+                  key={bed.bed_number}
+                  className={`bed-seat ${getBedStatus(bed)}`}
+                  onClick={() => bed.status === 'available' && handleBedSelection(bed.bed_number)}
+                  title={
+                    bed.status === 'occupied' 
+                      ? `Bed ${bed.bed_number} - OCCUPIED by ${bed.student_name || 'Unknown Student'}`
+                      : `Bed ${bed.bed_number} - AVAILABLE - Click to assign`
+                  }
+                  style={{ cursor: bed.status === 'available' ? 'pointer' : 'default' }}
+                >
+                  <div className="bed-number">#{bed.bed_number}</div>
+                  <div className="bed-status-label">
+                    {bed.status === 'occupied' ? (
+                      <span className="status-occupied">OCCUPIED</span>
+                    ) : (
+                      <span className="status-available">AVAILABLE</span>
+                    )}
+                  </div>
+                  {bed.status === 'occupied' && (
+                    <div className="occupant-name">
+                      {bed.student_name ? bed.student_name.split(' ')[0] : 'Student'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Detailed bed status breakdown */}
+        <div className="bed-details-section">
+          <h4>Bed-by-Bed Status:</h4>
+          <div className="bed-status-list">
+            {roomDetails.beds
+              .sort((a, b) => a.bed_number - b.bed_number)
+              .map(bed => (
+                <div key={bed.bed_number} className="bed-status-item">
+                  <span className="bed-label">Bed #{bed.bed_number}:</span>
+                  <span className={`status-text ${bed.status}`}>
+                    {bed.status === 'occupied' 
+                      ? `OCCUPIED by ${bed.student_name || 'Student'}` 
+                      : 'AVAILABLE'}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className="bed-legend">
+          <div className="legend-item">
+            <div className="legend-color available"></div>
+            <span>Available ({roomDetails.beds.filter(bed => bed.status === 'available').length})</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color occupied"></div>
+            <span>Occupied ({roomDetails.beds.filter(bed => bed.status === 'occupied').length})</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color selected"></div>
+            <span>Selected for Assignment</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="dashboard-container">
@@ -1010,77 +1292,118 @@ Please share these credentials with the student.`);
                   🔄
                 </button>
               </div>
-              <form onSubmit={handleRoomAssignment} className="assign-form">
+              {/* Enhanced Student Selection */}
+              <div className="student-selection-section">
+                <div className="section-header-inline">
+                  <h3>Select Student to Assign</h3>
+                  <button 
+                    type="button"
+                    className="refresh-students-btn"
+                    onClick={fetchUnassignedStudents}
+                    title="Refresh Student List"
+                  >
+                    🔄 Refresh Students
+                  </button>
+                </div>
                 <div className="form-group">
-                  <label htmlFor="student_id">Student Roll Number</label>
-                  <input
-                    type="text"
-                    id="student_id"
+                  <label htmlFor="student_dropdown">Choose Student</label>
+                  <select
+                    id="student_dropdown"
                     value={roomAssignment.studentId}
                     onChange={(e) => setRoomAssignment({
                       ...roomAssignment,
                       studentId: e.target.value
                     })}
                     required
-                    placeholder="Enter student roll number (e.g., CS2021001)"
-                  />
-                  <small className="field-note">Enter the student's roll number</small>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="room_select">Select Room</label>
-                  <select
-                    id="room_select"
-                    value={roomAssignment.roomId}
-                    onChange={(e) => handleRoomSelection(e.target.value)}
-                    required
+                    className="student-dropdown"
+                    disabled={unassignedStudents.length === 0}
                   >
-                    <option value="">Choose a room...</option>
-                    {rooms
-                      .filter(room => room.available_beds > 0)
-                      .map(room => (
-                        <option key={room.id} value={room.id}>
-                          Room {room.room_number} - Floor {room.floor} 
-                          ({room.available_beds} beds available)
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                {roomAssignment.roomId && (
-                  <div className="form-group">
-                    <label htmlFor="bed_select">Select Bed</label>
-                    <select
-                      id="bed_select"
-                      value={roomAssignment.bedNumber}
-                      onChange={(e) => setRoomAssignment({
-                        ...roomAssignment,
-                        bedNumber: e.target.value
-                      })}
-                      required
-                      disabled={bedsLoading}
-                    >
-                      <option value="">
-                        {bedsLoading ? "Loading beds..." : "Choose a bed..."}
+                    <option value="">
+                      {unassignedStudents.length === 0 
+                        ? "No unassigned students available" 
+                        : `Select from ${unassignedStudents.length} unassigned students...`}
+                    </option>
+                    {unassignedStudents
+                      .sort((a, b) => a.roll_no?.localeCompare(b.roll_no) || 0)
+                      .map(student => (
+                      <option key={student.id} value={student.roll_no}>
+                        {student.roll_no || 'NO-ROLL'} - {student.full_name || 'Unknown Name'} | {student.stream || ''} {student.branch || ''}
                       </option>
-                      {!bedsLoading && availableBeds.length > 0 ? (
-                        availableBeds.map(bedNumber => (
-                          <option key={bedNumber} value={bedNumber}>
-                            Bed {bedNumber}
-                          </option>
-                        ))
-                      ) : !bedsLoading && availableBeds.length === 0 ? (
-                        <option value="" disabled>No available beds</option>
-                      ) : null}
-                    </select>
-                    {!bedsLoading && availableBeds.length === 0 && roomAssignment.roomId && (
-                      <small className="field-note error">No available beds in this room</small>
+                    ))}
+                  </select>
+                  <small className="field-note">
+                    {unassignedStudents.length} unassigned students available
+                    {unassignedStudents.length === 0 && (
+                      <span className="error-note"> - All students have been assigned rooms</span>
                     )}
+                  </small>
+                </div>
+              </div>
+
+              {/* Visual Room Selection */}
+              <div className="visual-room-selection-warden">
+                <h3>Select Room</h3>
+                <p className="selection-hint">Click on any available room to view bed layout and make assignment</p>
+                <div className="rooms-grid-warden">
+                  {rooms
+                    .filter(room => room.available_beds > 0)
+                    .sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }))
+                    .map(room => (
+                      <RoomCardWarden key={room.id} room={room} />
+                    ))}
+                </div>
+                
+                {rooms.filter(room => room.available_beds > 0).length === 0 && (
+                  <div className="no-rooms-message">
+                    <p>No rooms with available beds found.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bed Layout Modal */}
+              {showBedLayout && selectedRoomDetails && (
+                <div className="bed-layout-overlay">
+                  <BedLayoutWarden roomDetails={selectedRoomDetails} />
+                </div>
+              )}
+
+              {/* Assignment Summary and Submit */}
+              <form onSubmit={handleRoomAssignment} className="assignment-summary-form">
+                {roomAssignment.studentId && roomAssignment.roomId && roomAssignment.bedNumber && (
+                  <div className="assignment-summary">
+                    <h4>Assignment Summary</h4>
+                    <div className="summary-details">
+                      <div className="summary-item">
+                        <strong>Student:</strong> 
+                        <span className="student-details">
+                          <span className="roll-number">{roomAssignment.studentId}</span>
+                          <span className="student-name">
+                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.full_name || 'Unknown Student'}
+                          </span>
+                          <span className="student-stream">
+                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.stream || ''} 
+                            {unassignedStudents.find(s => s.roll_no === roomAssignment.studentId)?.branch || ''}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="summary-item">
+                        <strong>Room:</strong> 
+                        Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor}
+                      </div>
+                      <div className="summary-item">
+                        <strong>Bed:</strong> 
+                        Bed #{roomAssignment.bedNumber}
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <button type="submit" className="submit-button">
-                  Assign Room
+                <button 
+                  type="submit" 
+                  className="submit-button"
+                  disabled={!roomAssignment.studentId || !roomAssignment.roomId || !roomAssignment.bedNumber}
+                >
+                  Assign Room to Student
                 </button>
               </form>
             </div>

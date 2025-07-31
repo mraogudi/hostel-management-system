@@ -17,6 +17,9 @@ const StudentDashboard = () => {
   const [bedsLoading, setBedsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [selectedRoomDetails, setSelectedRoomDetails] = useState(null);
+  const [showBedLayout, setShowBedLayout] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
     fetchData();
@@ -37,10 +40,13 @@ const StudentDashboard = () => {
       setFoodMenu(menuResult.data);
     }
 
-    // Fetch available rooms for room change
+    // Fetch all rooms (including occupied ones) for room change
     const roomsResult = await apiCall('GET', '/api/rooms');
     if (roomsResult.success) {
+      console.log('Fetched rooms data:', roomsResult.data);
       setRooms(roomsResult.data);
+    } else {
+      console.error('Failed to fetch rooms:', roomsResult.error);
     }
 
     setLoading(false);
@@ -93,7 +99,46 @@ const StudentDashboard = () => {
     }
   };
 
-  // Handle room selection for room change
+  // Handle room selection for visual interface
+  const handleRoomSelection = async (room) => {
+    const isCurrentRoom = room.id === roomInfo?.id;
+    const isFullyOccupied = room.available_beds === 0;
+    
+    // Allow viewing any room, but only allow selection of available rooms
+    if (!isCurrentRoom && !isFullyOccupied) {
+      setRoomChangeRequest({
+        ...roomChangeRequest,
+        requested_room_id: room.id,
+        requested_bed_number: ''
+      });
+    }
+
+    setBedsLoading(true);
+    try {
+      const result = await apiCall('GET', `/api/rooms/${room.id}`);
+      if (result.success && result.data) {
+        setSelectedRoomDetails(result.data);
+        setShowBedLayout(true);
+        if (!isCurrentRoom && !isFullyOccupied) {
+          const beds = await getAvailableBeds(room.id);
+          setAvailableBeds(beds);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching room details:', error);
+    }
+    setBedsLoading(false);
+  };
+
+  // Handle bed selection in visual interface
+  const handleBedSelection = (bedNumber) => {
+    setRoomChangeRequest({
+      ...roomChangeRequest,
+      requested_bed_number: bedNumber
+    });
+  };
+
+  // Handle room selection for room change (legacy)
   const handleRoomChangeSelection = async (roomId) => {
     setRoomChangeRequest({
       ...roomChangeRequest,
@@ -121,6 +166,262 @@ const StudentDashboard = () => {
       grouped[item.day_of_week][item.meal_type] = item.items;
     });
     return grouped;
+  };
+
+  // Visual Components
+  const RoomCard = ({ room }) => {
+    const isSelected = roomChangeRequest.requested_room_id === room.id;
+    const isCurrentRoom = room.id === roomInfo?.id;
+    const isFullyOccupied = room.available_beds === 0;
+    const isUnavailable = isFullyOccupied || isCurrentRoom;
+    const occupiedBeds = room.capacity - room.available_beds;
+    
+    return (
+      <div 
+        className={`room-card-visual ${isSelected ? 'selected' : ''} ${isUnavailable ? 'unavailable' : ''} ${isCurrentRoom ? 'current-room' : ''}`}
+        onClick={() => handleRoomSelection(room)}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="room-card-header">
+          <h4>Room {room.room_number}</h4>
+          <span className="floor-tag">Floor {room.floor}</span>
+        </div>
+        <div className="room-card-info">
+          <div className="info-item">
+            <span className="label">Type:</span>
+            <span className="value">{room.room_type}</span>
+          </div>
+          <div className="info-item">
+            <span className="label">Capacity:</span>
+            <span className="value">{room.capacity} beds</span>
+          </div>
+          <div className="info-item">
+            <span className="label">Occupied:</span>
+            <span className={`value ${occupiedBeds > 0 ? 'occupied' : 'empty'}`}>
+              {occupiedBeds} / {room.capacity} beds
+            </span>
+          </div>
+          <div className="info-item">
+            <span className="label">Available:</span>
+            <span className={`value ${room.available_beds === 0 ? 'unavailable' : 'available'}`}>
+              {room.available_beds} beds
+            </span>
+          </div>
+          
+          {/* Detailed bed breakdown for all rooms */}
+          <div className="bed-breakdown">
+            <span className="breakdown-title">Bed Status Overview:</span>
+            <div className="bed-status-indicators">
+              {occupiedBeds > 0 && (
+                <span className="bed-indicator occupied">
+                  <span className="indicator-dot occupied"></span>
+                  {occupiedBeds} Occupied
+                </span>
+              )}
+              {room.available_beds > 0 && (
+                <span className="bed-indicator available">
+                  <span className="indicator-dot available"></span>
+                  {room.available_beds} Available
+                </span>
+              )}
+              {occupiedBeds === 0 && (
+                <span className="bed-indicator all-available">
+                  <span className="indicator-dot available"></span>
+                  All {room.capacity} beds available
+                </span>
+              )}
+            </div>
+            
+            {/* Capacity visualization */}
+            <div className="bed-preview">
+              <span className="preview-title">Capacity:</span>
+              <div className="bed-icons">
+                {Array.from({ length: room.capacity }, (_, index) => {
+                  const bedNumber = index + 1;
+                  // Generic representation - red for occupied count, green for available
+                  const isOccupied = index < occupiedBeds;
+                  return (
+                    <span
+                      key={bedNumber}
+                      className={`mini-bed ${isOccupied ? 'occupied' : 'available'}`}
+                      title={`${isOccupied ? 'Occupied bed' : 'Available bed'} (Click room to see specific bed numbers)`}
+                    >
+                      {bedNumber}
+                    </span>
+                  );
+                })}
+              </div>
+              <small className="preview-note">Click room to see actual bed numbers and details</small>
+            </div>
+          </div>
+        </div>
+        <div className="room-card-status">
+          {isCurrentRoom ? (
+            <span className="status-badge current">Your Room</span>
+          ) : isFullyOccupied ? (
+            <span className="status-badge unavailable">Full</span>
+          ) : occupiedBeds > 0 ? (
+            <span className="status-badge partial">Partially Occupied</span>
+          ) : (
+            <span className="status-badge available">Available</span>
+          )}
+        </div>
+        
+        {/* Occupancy indicator */}
+        <div className="occupancy-indicator">
+          <div className="occupancy-bar">
+            <div 
+              className="occupancy-fill" 
+              style={{ width: `${(occupiedBeds / room.capacity) * 100}%` }}
+            ></div>
+          </div>
+          <span className="occupancy-text">
+            {Math.round((occupiedBeds / room.capacity) * 100)}% occupied
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const BedLayout = ({ roomDetails }) => {
+    if (!roomDetails || !roomDetails.beds) return null;
+
+    const isCurrentRoom = roomDetails.id === roomInfo?.id;
+    const isFullyOccupied = roomDetails.beds.filter(bed => bed.status === 'available').length === 0;
+    const isViewOnly = isCurrentRoom || isFullyOccupied;
+
+    const createBedGrid = () => {
+      const beds = roomDetails.beds.sort((a, b) => a.bed_number - b.bed_number);
+      const bedsPerRow = Math.ceil(Math.sqrt(roomDetails.capacity));
+      const rows = [];
+      
+      for (let i = 0; i < beds.length; i += bedsPerRow) {
+        rows.push(beds.slice(i, i + bedsPerRow));
+      }
+      
+      return rows;
+    };
+
+    const getBedStatus = (bed) => {
+      if (bed.status === 'occupied') return 'occupied';
+      if (!isViewOnly && roomChangeRequest.requested_bed_number === bed.bed_number) return 'selected';
+      return 'available';
+    };
+
+    return (
+      <div className="bed-layout-container">
+        <div className="bed-layout-header">
+          <div>
+            <h3>Room {roomDetails.room_number} - Floor {roomDetails.floor}</h3>
+            <div className="room-summary">
+              <span className="summary-item">
+                <strong>Type:</strong> {roomDetails.room_type}
+              </span>
+              <span className="summary-item">
+                <strong>Capacity:</strong> {roomDetails.capacity} beds
+              </span>
+              <span className="summary-item">
+                <strong>Occupied:</strong> {roomDetails.beds.filter(bed => bed.status === 'occupied').length} beds
+              </span>
+              <span className="summary-item">
+                <strong>Available:</strong> {roomDetails.beds.filter(bed => bed.status === 'available').length} beds
+              </span>
+            </div>
+            {isCurrentRoom && <span className="room-mode-indicator current">Your Current Room</span>}
+            {isFullyOccupied && !isCurrentRoom && <span className="room-mode-indicator occupied">Fully Occupied - View Only</span>}
+            {!isViewOnly && <span className="room-mode-indicator selectable">Select a bed to continue</span>}
+          </div>
+          <button 
+            className="close-layout-btn"
+            onClick={() => {
+              setShowBedLayout(false);
+              setSelectedRoomDetails(null);
+              if (!isViewOnly) {
+                setRoomChangeRequest({
+                  ...roomChangeRequest,
+                  requested_room_id: '',
+                  requested_bed_number: ''
+                });
+              }
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="bed-grid">
+          {createBedGrid().map((row, rowIndex) => (
+            <div key={rowIndex} className="bed-row">
+              {row.map((bed) => (
+                <div
+                  key={bed.bed_number}
+                  className={`bed-seat ${getBedStatus(bed)}`}
+                  onClick={() => !isViewOnly && bed.status === 'available' && handleBedSelection(bed.bed_number)}
+                  title={
+                    bed.status === 'occupied' 
+                      ? `Bed ${bed.bed_number} - OCCUPIED by ${bed.student_name || 'Unknown Student'}`
+                      : isViewOnly
+                      ? `Bed ${bed.bed_number} - Available (View Only Mode)`
+                      : `Bed ${bed.bed_number} - AVAILABLE - Click to select`
+                  }
+                  style={{ cursor: (!isViewOnly && bed.status === 'available') ? 'pointer' : 'default' }}
+                >
+                  <div className="bed-number">#{bed.bed_number}</div>
+                  <div className="bed-status-label">
+                    {bed.status === 'occupied' ? (
+                      <span className="status-occupied">OCCUPIED</span>
+                    ) : (
+                      <span className="status-available">AVAILABLE</span>
+                    )}
+                  </div>
+                  {bed.status === 'occupied' && (
+                    <div className="occupant-name">
+                      {bed.student_name ? bed.student_name.split(' ')[0] : 'Student'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Detailed bed status breakdown */}
+        <div className="bed-details-section">
+          <h4>Bed-by-Bed Status:</h4>
+          <div className="bed-status-list">
+            {roomDetails.beds
+              .sort((a, b) => a.bed_number - b.bed_number)
+              .map(bed => (
+                <div key={bed.bed_number} className="bed-status-item">
+                  <span className="bed-label">Bed #{bed.bed_number}:</span>
+                  <span className={`status-text ${bed.status}`}>
+                    {bed.status === 'occupied' 
+                      ? `OCCUPIED by ${bed.student_name || 'Student'}` 
+                      : 'AVAILABLE'}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        <div className="bed-legend">
+          <div className="legend-item">
+            <div className="legend-color available"></div>
+            <span>Available ({roomDetails.beds.filter(bed => bed.status === 'available').length})</span>
+          </div>
+          <div className="legend-item">
+            <div className="legend-color occupied"></div>
+            <span>Occupied ({roomDetails.beds.filter(bed => bed.status === 'occupied').length})</span>
+          </div>
+          {!isViewOnly && (
+            <div className="legend-item">
+              <div className="legend-color selected"></div>
+              <span>Selected</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -324,57 +625,73 @@ const StudentDashboard = () => {
                 </div>
               )}
 
-              <form onSubmit={handleRoomChangeRequest} className="request-form">
-                <div className="form-group">
-                  <label htmlFor="requested_room">Select New Room:</label>
-                  <select
-                    id="requested_room"
-                    value={roomChangeRequest.requested_room_id}
-                    onChange={(e) => handleRoomChangeSelection(e.target.value)}
-                    required
+              {/* Visual Room Selection */}
+              <div className="visual-room-selection">
+                <h3>All Rooms Overview</h3>
+                <p className="selection-hint">Click on any room to view its bed layout. You can only select beds in available rooms.</p>
+                
+                {/* Room Filter Controls */}
+                <div className="room-filters">
+                  <button 
+                    className={`filter-btn ${activeFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('all')}
                   >
-                    <option value="">Choose a room...</option>
-                    {rooms
-                      .filter(room => room.available_beds > 0 && room.id !== roomInfo?.id)
-                      .map(room => (
-                        <option key={room.id} value={room.id}>
-                          Room {room.room_number} - Floor {room.floor} 
-                          ({room.available_beds} beds available)
-                        </option>
-                      ))}
-                  </select>
+                    All Rooms ({rooms.length})
+                  </button>
+                  <button 
+                    className={`filter-btn ${activeFilter === 'available' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('available')}
+                  >
+                    Available ({rooms.filter(r => r.available_beds > 0).length})
+                  </button>
+                  <button 
+                    className={`filter-btn ${activeFilter === 'occupied' ? 'active' : ''}`}
+                    onClick={() => setActiveFilter('occupied')}
+                  >
+                    Occupied ({rooms.filter(r => r.available_beds === 0).length})
+                  </button>
                 </div>
 
-                {/* Bed Selection */}
-                {roomChangeRequest.requested_room_id && (
-                  <div className="form-group">
-                    <label htmlFor="requested_bed">Select Preferred Bed:</label>
-                    <select
-                      id="requested_bed"
-                      value={roomChangeRequest.requested_bed_number}
-                      onChange={(e) => setRoomChangeRequest({
-                        ...roomChangeRequest,
-                        requested_bed_number: e.target.value
-                      })}
-                      required
-                      disabled={bedsLoading}
-                    >
-                      <option value="">
-                        {bedsLoading ? "Loading beds..." : "Choose a bed..."}
-                      </option>
-                      {!bedsLoading && availableBeds.length > 0 ? (
-                        availableBeds.map(bedNumber => (
-                          <option key={bedNumber} value={bedNumber}>
-                            Bed {bedNumber}
-                          </option>
-                        ))
-                      ) : !bedsLoading && availableBeds.length === 0 && roomChangeRequest.requested_room_id ? (
-                        <option value="" disabled>No available beds</option>
-                      ) : null}
-                    </select>
-                    {!bedsLoading && availableBeds.length === 0 && roomChangeRequest.requested_room_id && (
-                      <small className="field-note error">No available beds in this room</small>
-                    )}
+                <div className="rooms-grid">
+                  {rooms
+                    .filter(room => {
+                      if (activeFilter === 'available') return room.available_beds > 0;
+                      if (activeFilter === 'occupied') return room.available_beds === 0;
+                      return true; // 'all'
+                    })
+                    .sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }))
+                    .map(room => (
+                      <RoomCard key={room.id} room={room} />
+                    ))}
+                </div>
+                
+                {rooms.filter(room => {
+                  if (activeFilter === 'available') return room.available_beds > 0;
+                  if (activeFilter === 'occupied') return room.available_beds === 0;
+                  return true;
+                }).length === 0 && (
+                  <div className="no-rooms-message">
+                    <p>No rooms found for the selected filter.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bed Layout Modal */}
+              {showBedLayout && selectedRoomDetails && (
+                <div className="bed-layout-overlay">
+                  <BedLayout roomDetails={selectedRoomDetails} />
+                </div>
+              )}
+
+              {/* Form for reason input */}
+              <form onSubmit={handleRoomChangeRequest} className="request-form">
+                {roomChangeRequest.requested_room_id && roomChangeRequest.requested_bed_number && (
+                  <div className="selection-summary">
+                    <h4>Selected Room & Bed</h4>
+                    <p>
+                      Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor} | 
+                      Bed {roomChangeRequest.requested_bed_number}
+                    </p>
                   </div>
                 )}
 
@@ -396,7 +713,7 @@ const StudentDashboard = () => {
                 <button 
                   type="submit" 
                   className="submit-button"
-                  disabled={roomChangeRequest.requested_room_id && availableBeds.length === 0}
+                  disabled={!roomChangeRequest.requested_room_id || !roomChangeRequest.requested_bed_number}
                 >
                   Submit Request
                 </button>
