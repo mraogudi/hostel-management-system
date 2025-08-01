@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: hostel-management-system
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/hostel_management
+      auto-index-creation: true
+  security:
+    user:
+      name: admin
+      password: admin123
+
+server:
+  port: 8080
+
+app:
+  jwt:
+    secret: hostel_management_secret_key_2024_spring_boot_version
+    expiration: 86400000 # 24 hours in milliseconds
+
+logging:
+  level:
+    com.hostel: DEBUG
+    org.springframework.security: DEBUG 

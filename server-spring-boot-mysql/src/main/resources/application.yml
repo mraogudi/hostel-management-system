@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: hostel-management-system
+  datasource:
+    url: jdbc:mysql://localhost:3306/hostel_management?createDatabaseIfNotExist=true
+    username: root
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  security:
+    user:
+      name: admin
+      password: admin123
+
+server:
+  port: 8081
+
+app:
+  jwt:
+    secret: hostel_management_secret_key_2024_spring_boot_version
+    expiration: 86400000 # 24 hours in milliseconds
+
+logging:
+  level:
+    com.hostel: DEBUG
+    org.springframework.security: DEBUG 
