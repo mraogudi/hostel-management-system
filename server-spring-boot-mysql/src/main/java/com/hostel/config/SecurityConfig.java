@@ -29,8 +29,6 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
     
     @Bean
     public PasswordEncoder passwordEncoder() {
