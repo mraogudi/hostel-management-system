@@ -20,6 +20,8 @@ const StudentDashboard = () => {
   const [selectedRoomDetails, setSelectedRoomDetails] = useState(null);
   const [showBedLayout, setShowBedLayout] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [showWardenContact, setShowWardenContact] = useState(false);
+  const [wardenContact, setWardenContact] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -240,6 +242,63 @@ const StudentDashboard = () => {
     return grouped;
   };
 
+  // Function to fetch warden contact information
+  const fetchWardenContact = async () => {
+    console.log('Fetching warden contact information...');
+    try {
+      const result = await apiCall('GET', '/api/student/warden-contact');
+      console.log('API call result:', result);
+      
+      if (result.success) {
+        console.log('Warden contact data:', result.data);
+        setWardenContact(result.data);
+        setShowWardenContact(true);
+      } else {
+        console.error('API call failed:', result.error);
+        // Fallback with default warden contact info
+        const fallbackContact = {
+          name: 'Hostel Warden',
+          email: 'warden@hostel.edu',
+          phone: null,
+          office_hours: '9:00 AM - 5:00 PM (Monday to Friday)',
+          emergency_contact: 'Available 24/7 for emergencies'
+        };
+        setWardenContact(fallbackContact);
+        setShowWardenContact(true);
+        setMessage('Using default warden contact information');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error fetching warden contact:', error);
+      // Fallback with default warden contact info
+      const fallbackContact = {
+        name: 'Hostel Warden',
+        email: 'warden@hostel.edu', 
+        phone: null,
+        office_hours: '9:00 AM - 5:00 PM (Monday to Friday)',
+        emergency_contact: 'Available 24/7 for emergencies'
+      };
+      setWardenContact(fallbackContact);
+      setShowWardenContact(true);
+      setMessage('Using default warden contact information');
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
+  // Function to handle Contact Warden button click
+  const handleContactWarden = () => {
+    console.log('Contact Warden button clicked!');
+    console.log('Current wardenContact:', wardenContact);
+    
+    if (wardenContact) {
+      console.log('Warden contact exists, showing modal');
+      setShowWardenContact(true);
+    } else {
+      console.log('No warden contact, fetching from API');
+      fetchWardenContact();
+    }
+  };
+
   // Visual Components
   const RoomCard = ({ room }) => {
     const isSelected = roomChangeRequest.requested_room_id == room.id;
@@ -247,6 +306,8 @@ const StudentDashboard = () => {
     const isFullyOccupied = room.available_beds === 0;
     const isUnavailable = isFullyOccupied || isCurrentRoom;
     const occupiedBeds = room.capacity - room.available_beds;
+    const [roomDetails, setRoomDetails] = useState(null);
+    const [showBeds, setShowBeds] = useState(false);
     
     // Debug logging for room selection state
     if (room.room_number === 'A101' || isSelected) { // Log for first room or selected room
@@ -262,109 +323,162 @@ const StudentDashboard = () => {
       });
     }
     
+    // Determine availability status for badge
+    const getAvailabilityStatus = () => {
+      if (room.available_beds === 0) return 'full';
+      if (room.available_beds === room.capacity) return 'available';
+      return 'partial';
+    };
+
+    // Handle room card click to expand bed selection
+    const handleCardClick = async () => {
+      if (!isSelected && !isUnavailable) {
+        // Select this room
+        await handleRoomSelection(room);
+        // Fetch detailed room info with beds
+        const result = await apiCall('GET', `/api/rooms/${room.id}`);
+        if (result.success && result.data) {
+          setRoomDetails(result.data);
+          setShowBeds(true);
+        }
+      } else if (isSelected) {
+        // Toggle bed display for already selected room
+        if (!showBeds && !roomDetails) {
+          const result = await apiCall('GET', `/api/rooms/${room.id}`);
+          if (result.success && result.data) {
+            setRoomDetails(result.data);
+            setShowBeds(true);
+          }
+        } else {
+          setShowBeds(!showBeds);
+        }
+      }
+    };
+
     return (
-      <div 
-        className={`room-card-visual ${isSelected ? 'selected' : ''} ${isUnavailable ? 'unavailable' : ''} ${isCurrentRoom ? 'current-room' : ''}`}
-        onClick={() => handleRoomSelection(room)}
-        style={{ cursor: 'pointer' }}
-      >
-        <div className="room-card-header">
-          <h4>Room {room.room_number}</h4>
-          <span className="floor-tag">Floor {room.floor}</span>
-        </div>
-        <div className="room-card-info">
-          <div className="info-item">
-            <span className="label">Type:</span>
-            <span className="value">{room.room_type}</span>
+      <div className="room-card-container">
+        <div 
+          className={`room-card ${isSelected ? 'selected' : ''} ${isUnavailable ? 'unavailable' : ''} ${isCurrentRoom ? 'current-room' : ''}`}
+          data-availability={getAvailabilityStatus()}
+          onClick={handleCardClick}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className="room-card-header">
+            <h4>Room {room.room_number}</h4>
+            <span className="floor-tag">Floor {room.floor}</span>
           </div>
-          <div className="info-item">
-            <span className="label">Capacity:</span>
-            <span className="value">{room.capacity} beds</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Occupied:</span>
-            <span className={`value ${occupiedBeds > 0 ? 'occupied' : 'empty'}`}>
-              {occupiedBeds} / {room.capacity} beds
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="label">Available:</span>
-            <span className={`value ${room.available_beds === 0 ? 'unavailable' : 'available'}`}>
-              {room.available_beds} beds
-            </span>
-          </div>
-          
-          {/* Detailed bed breakdown for all rooms */}
-          <div className="bed-breakdown">
-            <span className="breakdown-title">Bed Status Overview:</span>
-            <div className="bed-status-indicators">
-              {occupiedBeds > 0 && (
-                <span className="bed-indicator occupied">
-                  <span className="indicator-dot occupied"></span>
-                  {occupiedBeds} Occupied
-                </span>
-              )}
-              {room.available_beds > 0 && (
-                <span className="bed-indicator available">
-                  <span className="indicator-dot available"></span>
-                  {room.available_beds} Available
-                </span>
-              )}
-              {occupiedBeds === 0 && (
-                <span className="bed-indicator all-available">
-                  <span className="indicator-dot available"></span>
-                  All {room.capacity} beds available
-                </span>
-              )}
+          <div className="room-card-info">
+            <div className="room-info-text">
+              <p><strong>Type:</strong> {room.room_type}</p>
+              <p><strong>Capacity:</strong> {room.capacity} beds</p>
+              <p><strong>Occupied:</strong> {occupiedBeds} beds</p>
+              <p><strong>Available:</strong> {room.available_beds} beds</p>
             </div>
             
-            {/* Capacity visualization */}
-            <div className="bed-preview">
-              <span className="preview-title">Capacity:</span>
-              <div className="bed-icons">
+            <div className="bed-status">
+              <span className="bed-title">Beds:</span>
+              <div className="bed-numbers">
                 {Array.from({ length: room.capacity }, (_, index) => {
                   const bedNumber = index + 1;
-                  // Generic representation - red for occupied count, green for available
                   const isOccupied = index < occupiedBeds;
                   return (
                     <span
                       key={bedNumber}
-                      className={`mini-bed ${isOccupied ? 'occupied' : 'available'}`}
-                      title={`${isOccupied ? 'Occupied bed' : 'Available bed'} (Click room to see specific bed numbers)`}
+                      className={`bed-num ${isOccupied ? 'occupied' : 'available'}`}
+                      title={`Bed ${bedNumber} - ${isOccupied ? 'Occupied' : 'Available'}`}
                     >
                       {bedNumber}
                     </span>
                   );
                 })}
               </div>
-              <small className="preview-note">Click room to see actual bed numbers and details</small>
             </div>
           </div>
-        </div>
-        <div className="room-card-status">
-          {isCurrentRoom ? (
-            <span className="status-badge current">Your Room</span>
-          ) : isFullyOccupied ? (
-            <span className="status-badge unavailable">Full</span>
-          ) : occupiedBeds > 0 ? (
-            <span className="status-badge partial">Partially Occupied</span>
-          ) : (
-            <span className="status-badge available">Available</span>
+          <div className="room-card-status">
+            {isCurrentRoom ? (
+              <span className="status-badge current">Your Room</span>
+            ) : isFullyOccupied ? (
+              <span className="status-badge unavailable">Full</span>
+            ) : occupiedBeds > 0 ? (
+              <span className="status-badge partial">Partially Occupied</span>
+            ) : (
+              <span className="status-badge available">Available</span>
+            )}
+          </div>
+          
+          {/* Occupancy indicator */}
+          <div className="occupancy-indicator">
+            <div className="occupancy-bar">
+              <div 
+                className="occupancy-fill" 
+                style={{ width: `${(occupiedBeds / room.capacity) * 100}%` }}
+              ></div>
+            </div>
+            <span className="occupancy-text">
+              {Math.round((occupiedBeds / room.capacity) * 100)}% occupied
+            </span>
+          </div>
+          
+          {/* Expand/Collapse indicator */}
+          {isSelected && !isUnavailable && (
+            <div className="expand-indicator">
+              <span>{showBeds ? '▲ Hide Beds' : '▼ Show Beds'}</span>
+            </div>
           )}
         </div>
-        
-        {/* Occupancy indicator */}
-        <div className="occupancy-indicator">
-          <div className="occupancy-bar">
-            <div 
-              className="occupancy-fill" 
-              style={{ width: `${(occupiedBeds / room.capacity) * 100}%` }}
-            ></div>
+
+        {/* Bed Selection Area */}
+        {isSelected && showBeds && roomDetails && !isUnavailable && (
+          <div className="inline-bed-selection">
+            <div className="bed-selection-header">
+              <h4>Select a Bed in Room {room.room_number}</h4>
+              <p>Click on an available bed to select it</p>
+            </div>
+            
+            <div className="bed-grid-inline">
+              {roomDetails.beds
+                .sort((a, b) => a.bed_number - b.bed_number)
+                .map((bed) => {
+                  const isSelectedBed = roomChangeRequest.requested_bed_number == bed.bed_number;
+                  const isAvailable = bed.status === 'available';
+                  
+                  return (
+                    <div
+                      key={bed.bed_number}
+                      className={`bed-option ${!isAvailable ? 'occupied' : isSelectedBed ? 'selected' : 'available'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isAvailable) {
+                          handleBedSelection(bed.bed_number);
+                        }
+                      }}
+                      style={{ cursor: isAvailable ? 'pointer' : 'not-allowed' }}
+                    >
+                      <div className="bed-number">#{bed.bed_number}</div>
+                      <div className="bed-status-text">
+                        {bed.status === 'occupied' ? (
+                          <span>Occupied</span>
+                        ) : isSelectedBed ? (
+                          <span>Selected ✓</span>
+                        ) : (
+                          <span>Available</span>
+                        )}
+                      </div>
+                      {bed.status === 'occupied' && bed.student_name && (
+                        <div className="bed-occupant">{bed.student_name.split(' ')[0]}</div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+            
+            {roomChangeRequest.requested_bed_number && (
+              <div className="bed-selection-summary">
+                <p><strong>Selected:</strong> Room {room.room_number}, Bed #{roomChangeRequest.requested_bed_number}</p>
+              </div>
+            )}
           </div>
-          <span className="occupancy-text">
-            {Math.round((occupiedBeds / room.capacity) * 100)}% occupied
-          </span>
-        </div>
+        )}
       </div>
     );
   };
@@ -625,92 +739,174 @@ const StudentDashboard = () => {
           {message && <div className="message">{message}</div>}
 
           {activeTab === 'room' && (
-            <div className="room-info-section">
-              <div className="section-header">
-                <h2>My Profile & Room Details</h2>
-                <button 
-                  className="refresh-btn"
-                  onClick={() => fetchData()}
-                  title="Refresh Room Data"
-                >
-                  🔄
-                </button>
-              </div>
-              
-              {/* Student Profile Section */}
-              <div className="profile-card">
-                <h3>Student Information</h3>
-                <div className="profile-details">
-                  <div className="detail-row">
-                    <div className="detail-item">
-                      <strong>Full Name:</strong> {user.full_name}
+            <div className="my-room-section">
+              <div className="profile-room-container">
+                {/* Student Profile Section */}
+                <div className="modern-profile-card">
+                  <div className="card-header">
+                    <div className="header-icon">👨‍🎓</div>
+                    <div className="header-text">
+                      <h3>Student Information</h3>
+                      <p>Your personal details</p>
                     </div>
-                    <div className="detail-item">
-                      <strong>Roll Number:</strong> {user.roll_no || 'Not assigned'}
-                    </div>
-                  </div>
-                  <div className="detail-row">
-                    <div className="detail-item">
-                      <strong>Stream:</strong> {user.stream || 'Not specified'}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Branch:</strong> {user.branch || 'Not specified'}
-                    </div>
-                  </div>
-                  <div className="detail-row">
-                    <div className="detail-item">
-                      <strong>Gender:</strong> {user.gender || 'Not specified'}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Email:</strong> {user.email || 'Not provided'}
-                    </div>
-                  </div>
-                  <div className="detail-row">
-                    <div className="detail-item">
-                      <strong>Phone:</strong> {user.phone || 'Not provided'}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Date of Birth:</strong> {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'Not provided'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Room Information Section */}
-              {roomInfo ? (
-                <div className="room-card">
-                  <div className="room-header">
-                    <h3>Room {roomInfo.room_number}</h3>
-                    <span className="floor-badge">Floor {roomInfo.floor}</span>
-                  </div>
-                  <div className="room-details">
-                    <div className="detail-item">
-                      <strong>Bed Number:</strong> {roomInfo.bed_number}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Room Type:</strong> {roomInfo.room_type}
-                    </div>
-                    <div className="detail-item">
-                      <strong>Capacity:</strong> {roomInfo.capacity} beds
-                    </div>
+                    <div className="status-indicator active">Active</div>
                   </div>
                   
-                  {roomInfo.roommates && roomInfo.roommates.length > 0 && (
-                    <div className="roommates-section">
-                      <h4>Roommates</h4>
-                      <ul className="roommates-list">
-                        {roomInfo.roommates.map((roommate, index) => (
-                          <li key={index}>{roommate.full_name}</li>
-                        ))}
-                      </ul>
+                  <div className="profile-content">
+                    <div className="info-grid">
+                      <div className="info-card">
+                        <div className="info-icon">📝</div>
+                        <div className="info-content">
+                          <label>Full Name</label>
+                          <span className="value">{user.full_name}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">🔢</div>
+                        <div className="info-content">
+                          <label>Roll Number</label>
+                          <span className="value">{user.roll_no || 'Not assigned'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">📚</div>
+                        <div className="info-content">
+                          <label>Stream</label>
+                          <span className="value">{user.stream || 'Not specified'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">🎯</div>
+                        <div className="info-content">
+                          <label>Branch</label>
+                          <span className="value">{user.branch || 'Not specified'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">⚧</div>
+                        <div className="info-content">
+                          <label>Gender</label>
+                          <span className="value">{user.gender || 'Not specified'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">📧</div>
+                        <div className="info-content">
+                          <label>Email</label>
+                          <span className="value">{user.email || 'Not provided'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">📱</div>
+                        <div className="info-content">
+                          <label>Phone</label>
+                          <span className="value">{user.phone || 'Not provided'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="info-card">
+                        <div className="info-icon">🎂</div>
+                        <div className="info-content">
+                          <label>Date of Birth</label>
+                          <span className="value">{user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'Not provided'}</span>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              ) : (
-                <div className="no-room">
-                  <p>No room assigned yet. Please contact the warden.</p>
-                </div>
-              )}
+
+                {/* Room Information Section */}
+                {roomInfo ? (
+                  <div className="modern-room-card">
+                    <div className="card-header">
+                      <div className="header-icon">🏠</div>
+                      <div className="header-text">
+                        <h3>Room {roomInfo.room_number}</h3>
+                        <p>Floor {roomInfo.floor} • {roomInfo.room_type}</p>
+                      </div>
+                      <div className="status-indicator occupied">Assigned</div>
+                    </div>
+                    
+                    <div className="room-content">
+                      <div className="room-stats">
+                        <div className="stat-item">
+                          <div className="stat-icon">🛏️</div>
+                          <div className="stat-content">
+                            <label>Your Bed</label>
+                            <span className="value">Bed #{roomInfo.bed_number}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="stat-item">
+                          <div className="stat-icon">🏢</div>
+                          <div className="stat-content">
+                            <label>Room Type</label>
+                            <span className="value">{roomInfo.room_type}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="stat-item">
+                          <div className="stat-icon">👥</div>
+                          <div className="stat-content">
+                            <label>Capacity</label>
+                            <span className="value">{roomInfo.capacity} beds</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {roomInfo.roommates && roomInfo.roommates.length > 0 && (
+                        <div className="roommates-modern">
+                          <div className="roommates-header">
+                            <span className="roommates-icon">👫</span>
+                            <h4>Roommates ({roomInfo.roommates.length})</h4>
+                          </div>
+                          <div className="roommates-grid">
+                            {roomInfo.roommates.map((roommate, index) => (
+                              <div key={index} className="roommate-card">
+                                <div className="roommate-avatar">
+                                  {roommate.full_name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="roommate-info">
+                                  <span className="roommate-name">{roommate.full_name}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {(!roomInfo.roommates || roomInfo.roommates.length === 0) && (
+                        <div className="no-roommates">
+                          <div className="no-roommates-icon">🏠</div>
+                          <p>You have this room to yourself!</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="no-room-modern">
+                    <div className="no-room-icon">🏠</div>
+                    <h3>No Room Assigned</h3>
+                    <p>You don't have a room assigned yet. Please contact the warden for room allocation.</p>
+                    <button 
+                      className="contact-warden-btn" 
+                      onClick={() => {
+                        console.log('Button clicked - direct onclick');
+                        alert('Button clicked! Check console for details.');
+                        handleContactWarden();
+                      }}
+                    >
+                      Contact Warden
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -735,16 +931,6 @@ const StudentDashboard = () => {
 
           {activeTab === 'request' && (
             <div className="request-section">
-              <div className="section-header">
-                <h2>Request Room Change</h2>
-                <button 
-                  className="refresh-btn"
-                  onClick={() => fetchData()}
-                  title="Refresh Available Rooms"
-                >
-                  🔄 
-                </button>
-              </div>
               
               {/* Current Room Details */}
               {roomInfo && (
@@ -837,28 +1023,23 @@ const StudentDashboard = () => {
 
 
 
-              {/* Alternative Bed Selection - Always shown when room is selected */}
-              {roomChangeRequest.requested_room_id && (
+              {/* Alternative Bed Selection - Fallback for when inline selection is not used */}
+              {roomChangeRequest.requested_room_id && !roomChangeRequest.requested_bed_number && (
                 <div className="alternative-bed-selection" style={{
                   marginTop: '20px',
                   padding: '20px',
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: '#fff3cd',
                   borderRadius: '8px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid #ffeaa7'
                 }}>
-                  <h4 style={{ color: '#28a745', marginBottom: '15px' }}>✅ Simple Bed Selection</h4>
-                  <p style={{ marginBottom: '15px' }}>
-                    {(() => {
-                      const selectedRoom = rooms.find(room => room.id == roomChangeRequest.requested_room_id);
-                      return selectedRoom 
-                        ? `Select a bed in Room ${selectedRoom.room_number} (Floor ${selectedRoom.floor}):`
-                        : 'Select a bed from the list below:';
-                    })()}
+                  <h4 style={{ color: '#856404', marginBottom: '15px' }}>⚠️ No Bed Selected</h4>
+                  <p style={{ marginBottom: '15px', color: '#856404' }}>
+                    Please click on the room card above to expand it and select a bed, or use the dropdown below:
                   </p>
                   <div style={{ marginTop: '10px' }}>
                     {availableBeds.length > 0 ? (
                       <div>
-                        <label htmlFor="bedSelect" style={{ fontWeight: 'bold' }}>Available Beds:</label>
+                        <label htmlFor="bedSelect" style={{ fontWeight: 'bold', color: '#856404' }}>Available Beds:</label>
                         <select 
                           id="bedSelect"
                           value={roomChangeRequest.requested_bed_number || ''}
@@ -872,7 +1053,7 @@ const StudentDashboard = () => {
                             marginLeft: '10px',
                             padding: '10px 12px',
                             borderRadius: '4px',
-                            border: '2px solid #28a745',
+                            border: '2px solid #ffc107',
                             fontSize: '16px',
                             backgroundColor: 'white'
                           }}
@@ -884,11 +1065,6 @@ const StudentDashboard = () => {
                             </option>
                           ))}
                         </select>
-                        {roomChangeRequest.requested_bed_number && (
-                          <span style={{ marginLeft: '10px', color: '#28a745', fontWeight: 'bold' }}>
-                            ✓ Bed {roomChangeRequest.requested_bed_number} selected!
-                          </span>
-                        )}
                       </div>
                     ) : (
                       <div>
@@ -976,6 +1152,81 @@ const StudentDashboard = () => {
           )}
         </main>
       </div>
+
+      {/* Warden Contact Modal */}
+      {console.log('Rendering modal check - showWardenContact:', showWardenContact, 'wardenContact:', wardenContact)}
+      {showWardenContact && wardenContact && (
+        <div className="modal-overlay" onClick={() => setShowWardenContact(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📞 Contact Warden</h3>
+              <button 
+                className="modal-close-btn"
+                onClick={() => setShowWardenContact(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="contact-info">
+                <div className="contact-item">
+                  <div className="contact-icon">👤</div>
+                  <div className="contact-details">
+                    <label>Name</label>
+                    <span>{wardenContact.name}</span>
+                  </div>
+                </div>
+                
+                <div className="contact-item">
+                  <div className="contact-icon">📧</div>
+                  <div className="contact-details">
+                    <label>Email</label>
+                    <span>{wardenContact.email}</span>
+                    <a href={`mailto:${wardenContact.email}`} className="contact-action">Send Email</a>
+                  </div>
+                </div>
+                
+                {wardenContact.phone && (
+                  <div className="contact-item">
+                    <div className="contact-icon">📱</div>
+                    <div className="contact-details">
+                      <label>Phone</label>
+                      <span>{wardenContact.phone}</span>
+                      <a href={`tel:${wardenContact.phone}`} className="contact-action">Call Now</a>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="contact-item">
+                  <div className="contact-icon">🕐</div>
+                  <div className="contact-details">
+                    <label>Office Hours</label>
+                    <span>{wardenContact.office_hours}</span>
+                  </div>
+                </div>
+                
+                <div className="contact-item emergency">
+                  <div className="contact-icon">🚨</div>
+                  <div className="contact-details">
+                    <label>Emergency Contact</label>
+                    <span>{wardenContact.emergency_contact}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button 
+                className="modal-btn secondary"
+                onClick={() => setShowWardenContact(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

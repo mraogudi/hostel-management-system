@@ -72,4 +72,19 @@ public class StudentController {
                 .body(Map.of("error", "Database error"));
         }
     }
+    
+    @GetMapping("/warden-contact")
+    public ResponseEntity<?> getWardenContact() {
+        try {
+            Map<String, Object> wardenContact = studentService.getWardenContact();
+            return ResponseEntity.ok(wardenContact);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to get warden contact information"));
+        }
+    }
 } 

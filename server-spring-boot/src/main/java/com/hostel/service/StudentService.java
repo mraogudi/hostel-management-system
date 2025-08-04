@@ -508,4 +508,28 @@ public class StudentService {
         }
         return sb.toString();
     }
+    
+    public Map<String, Object> getWardenContact() {
+        System.out.println("=== getWardenContact ===");
+        
+        // Find the warden user
+        Optional<User> wardenOptional = userRepository.findByRole("warden").stream().findFirst();
+        
+        if (wardenOptional.isEmpty()) {
+            throw new RuntimeException("Warden contact information not available");
+        }
+        
+        User warden = wardenOptional.get();
+        System.out.println("Found warden: " + warden.getFullName());
+        
+        Map<String, Object> wardenContact = new HashMap<>();
+        wardenContact.put("name", warden.getFullName());
+        wardenContact.put("email", warden.getEmail());
+        wardenContact.put("phone", warden.getPhone());
+        wardenContact.put("office_hours", "9:00 AM - 5:00 PM (Monday to Friday)");
+        wardenContact.put("emergency_contact", "Available 24/7 for emergencies");
+        
+        System.out.println("Returning warden contact information");
+        return wardenContact;
+    }
 } 
