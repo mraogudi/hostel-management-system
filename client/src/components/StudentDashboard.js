@@ -25,6 +25,20 @@ const StudentDashboard = () => {
     fetchData();
   }, []);
 
+
+
+  // Ensure beds are loaded when room is selected
+  useEffect(() => {
+    const loadBedsForSelectedRoom = async () => {
+      if (roomChangeRequest.requested_room_id && availableBeds.length === 0) {
+        const beds = await getAvailableBeds(roomChangeRequest.requested_room_id);
+        setAvailableBeds(beds);
+      }
+    };
+    
+    loadBedsForSelectedRoom();
+  }, [roomChangeRequest.requested_room_id]);
+
   const fetchData = async () => {
     setLoading(true);
     
@@ -55,19 +69,46 @@ const StudentDashboard = () => {
   const handleRoomChangeRequest = async (e) => {
     e.preventDefault();
     
+    console.log('Submitting room change request:', roomChangeRequest);
+    
+    // Validate required fields
+    if (!roomChangeRequest.requested_room_id) {
+      setMessage('Error: Please select a room first');
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+    
+    if (!roomChangeRequest.requested_bed_number) {
+      setMessage('Error: Please select a bed first');
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+    
+    if (!(roomChangeRequest.reason && roomChangeRequest.reason.trim())) {
+      setMessage('Error: Please provide a reason for the room change');
+      setTimeout(() => setMessage(''), 5000);
+      return;
+    }
+    
     // Create request object with backend-expected field names
     const requestData = {
       requestedRoomId: roomChangeRequest.requested_room_id,
       requestedBedNumber: parseInt(roomChangeRequest.requested_bed_number),
-      reason: roomChangeRequest.reason
+      reason: roomChangeRequest.reason.trim()
     };
     
+    console.log('Request data to be sent:', requestData);
+    
     const result = await apiCall('POST', '/api/student/room-change-request', requestData);
+    
+    console.log('API result:', result);
     
     if (result.success) {
       setMessage('Room change request submitted successfully!');
       setRoomChangeRequest({ requested_room_id: '', requested_bed_number: '', reason: '' });
       setAvailableBeds([]);
+      setSelectedRoomDetails(null);
+      setShowBedLayout(false);
     } else {
       setMessage(`Error: ${result.error}`);
     }
@@ -101,28 +142,45 @@ const StudentDashboard = () => {
 
   // Handle room selection for visual interface
   const handleRoomSelection = async (room) => {
-    const isCurrentRoom = room.id === roomInfo?.id;
+    const isCurrentRoom = room.id == roomInfo?.id; // Use loose equality to handle type differences
     const isFullyOccupied = room.available_beds === 0;
+    const canSelectRoom = !isCurrentRoom && !isFullyOccupied;
     
-    // Allow viewing any room, but only allow selection of available rooms
-    if (!isCurrentRoom && !isFullyOccupied) {
-      setRoomChangeRequest({
-        ...roomChangeRequest,
-        requested_room_id: room.id,
-        requested_bed_number: ''
-      });
-    }
+    console.log('Room selection:', {
+      roomId: room.id,
+      roomNumber: room.room_number,
+      isCurrentRoom,
+      isFullyOccupied,
+      canSelectRoom,
+      currentRoomId: roomInfo?.id,
+      alreadySelectedRoom: roomChangeRequest.requested_room_id === room.id
+    });
 
     setBedsLoading(true);
     try {
       const result = await apiCall('GET', `/api/rooms/${room.id}`);
       if (result.success && result.data) {
-        setSelectedRoomDetails(result.data);
-        setShowBedLayout(true);
-        if (!isCurrentRoom && !isFullyOccupied) {
+        // Popup disabled - using dropdown selection instead
+        // setSelectedRoomDetails(result.data);
+        // setShowBedLayout(true);
+        
+        // Always set the room for change request if it's selectable (including re-selecting the same room)
+        if (canSelectRoom) {
+          setRoomChangeRequest({
+            ...roomChangeRequest,
+            requested_room_id: room.id,
+            requested_bed_number: '' // Clear bed selection when room is selected/re-selected
+          });
+          console.log('Room selected for change request:', room.id);
+          
           const beds = await getAvailableBeds(room.id);
           setAvailableBeds(beds);
+          console.log('Available beds:', beds);
+        } else {
+          console.log('Room cannot be selected for change request');
         }
+      } else {
+        console.error('Failed to fetch room details:', result.error);
       }
     } catch (error) {
       console.error('Error fetching room details:', error);
@@ -132,10 +190,24 @@ const StudentDashboard = () => {
 
   // Handle bed selection in visual interface
   const handleBedSelection = (bedNumber) => {
-    setRoomChangeRequest({
-      ...roomChangeRequest,
-      requested_bed_number: bedNumber
+    console.log('=== BED SELECTION START ===');
+    console.log('Bed selection:', {
+      bedNumber,
+      bedNumberType: typeof bedNumber,
+      currentRoomChangeRequest: roomChangeRequest,
+      selectedRoomId: roomChangeRequest.requested_room_id
     });
+    
+    const newRequest = {
+      ...roomChangeRequest,
+      requested_bed_number: String(bedNumber) // Ensure consistent string type
+    };
+    
+    console.log('New room change request state:', newRequest);
+    setRoomChangeRequest(newRequest);
+    
+    console.log('Bed selected:', bedNumber);
+    console.log('=== BED SELECTION END ===');
   };
 
   // Handle room selection for room change (legacy)
@@ -170,11 +242,25 @@ const StudentDashboard = () => {
 
   // Visual Components
   const RoomCard = ({ room }) => {
-    const isSelected = roomChangeRequest.requested_room_id === room.id;
-    const isCurrentRoom = room.id === roomInfo?.id;
+    const isSelected = roomChangeRequest.requested_room_id == room.id;
+    const isCurrentRoom = room.id == roomInfo?.id; // Use loose equality to handle type differences
     const isFullyOccupied = room.available_beds === 0;
     const isUnavailable = isFullyOccupied || isCurrentRoom;
     const occupiedBeds = room.capacity - room.available_beds;
+    
+    // Debug logging for room selection state
+    if (room.room_number === 'A101' || isSelected) { // Log for first room or selected room
+      console.log('RoomCard render:', {
+        roomId: room.id,
+        roomNumber: room.room_number,
+        requestedRoomId: roomChangeRequest.requested_room_id,
+        isSelected,
+        isCurrentRoom,
+        isFullyOccupied,
+        isUnavailable,
+        currentRoomId: roomInfo?.id
+      });
+    }
     
     return (
       <div 
@@ -286,9 +372,26 @@ const StudentDashboard = () => {
   const BedLayout = ({ roomDetails }) => {
     if (!roomDetails || !roomDetails.beds) return null;
 
-    const isCurrentRoom = roomDetails.id === roomInfo?.id;
+    const isCurrentRoom = roomDetails.id == roomInfo?.id; // Use loose equality to handle type differences
     const isFullyOccupied = roomDetails.beds.filter(bed => bed.status === 'available').length === 0;
     const isViewOnly = isCurrentRoom || isFullyOccupied;
+    
+    // Debug logging for bed layout and state
+    console.log('BedLayout Render - State Check:', {
+      roomDetailsId: roomDetails.id,
+      roomDetailsIdType: typeof roomDetails.id,
+      roomInfoId: roomInfo?.id,
+      roomInfoIdType: typeof roomInfo?.id,
+      isCurrentRoom,
+      availableBeds: roomDetails.beds.filter(bed => bed.status === 'available').length,
+      totalBeds: roomDetails.beds.length,
+      isFullyOccupied,
+      isViewOnly,
+      roomNumber: roomDetails.room_number,
+      currentRoomChangeRequest: roomChangeRequest,
+      requestedBedNumber: roomChangeRequest.requested_bed_number,
+      requestedBedNumberType: typeof roomChangeRequest.requested_bed_number
+    });
 
     const createBedGrid = () => {
       const beds = roomDetails.beds.sort((a, b) => a.bed_number - b.bed_number);
@@ -304,7 +407,25 @@ const StudentDashboard = () => {
 
     const getBedStatus = (bed) => {
       if (bed.status === 'occupied') return 'occupied';
-      if (!isViewOnly && roomChangeRequest.requested_bed_number === bed.bed_number) return 'selected';
+      
+      const isSelected = !isViewOnly && roomChangeRequest.requested_bed_number == bed.bed_number;
+      
+      // Debug logging for bed status
+      if (roomChangeRequest.requested_bed_number) {
+        console.log(`getBedStatus for bed ${bed.bed_number}:`, {
+          bedNumber: bed.bed_number,
+          bedNumberType: typeof bed.bed_number,
+          requestedBedNumber: roomChangeRequest.requested_bed_number,
+          requestedBedNumberType: typeof roomChangeRequest.requested_bed_number,
+          isViewOnly,
+          comparison: roomChangeRequest.requested_bed_number == bed.bed_number,
+          strictComparison: roomChangeRequest.requested_bed_number === bed.bed_number,
+          isSelected,
+          finalStatus: isSelected ? 'selected' : 'available'
+        });
+      }
+      
+      if (isSelected) return 'selected';
       return 'available';
     };
 
@@ -334,12 +455,17 @@ const StudentDashboard = () => {
           <button 
             className="close-layout-btn"
             onClick={() => {
+              console.log('Closing bed layout, isViewOnly:', isViewOnly);
               setShowBedLayout(false);
               setSelectedRoomDetails(null);
-              if (!isViewOnly) {
+              // Only clear the selection if we're in view-only mode (current room or fully occupied)
+              // Otherwise, keep the room selection but clear the bed selection
+              if (isViewOnly) {
+                console.log('View-only mode, not clearing room selection');
+              } else {
+                console.log('Clearing bed selection but keeping room selection');
                 setRoomChangeRequest({
                   ...roomChangeRequest,
-                  requested_room_id: '',
                   requested_bed_number: ''
                 });
               }
@@ -356,7 +482,25 @@ const StudentDashboard = () => {
                 <div
                   key={bed.bed_number}
                   className={`bed-seat ${getBedStatus(bed)}`}
-                  onClick={() => !isViewOnly && bed.status === 'available' && handleBedSelection(bed.bed_number)}
+                  onClick={() => {
+                    console.log('Bed clicked:', {
+                      bedNumber: bed.bed_number,
+                      bedStatus: bed.status,
+                      isViewOnly,
+                      isCurrentRoom,
+                      isFullyOccupied,
+                      canSelect: !isViewOnly && bed.status === 'available',
+                      roomDetailsId: roomDetails.id,
+                      roomInfoId: roomInfo?.id
+                    });
+                    if (!isViewOnly && bed.status === 'available') {
+                      console.log('Calling handleBedSelection with:', bed.bed_number);
+                      handleBedSelection(bed.bed_number);
+                    } else {
+                      console.log('Bed selection blocked - isViewOnly:', isViewOnly, 'bedStatus:', bed.status, 
+                        'isCurrentRoom:', isCurrentRoom, 'isFullyOccupied:', isFullyOccupied);
+                    }
+                  }}
                   title={
                     bed.status === 'occupied' 
                       ? `Bed ${bed.bed_number} - OCCUPIED by ${bed.student_name || 'Unknown Student'}`
@@ -364,12 +508,27 @@ const StudentDashboard = () => {
                       ? `Bed ${bed.bed_number} - Available (View Only Mode)`
                       : `Bed ${bed.bed_number} - AVAILABLE - Click to select`
                   }
-                  style={{ cursor: (!isViewOnly && bed.status === 'available') ? 'pointer' : 'default' }}
+                  style={{
+                    cursor: (!isViewOnly && bed.status === 'available') ? 'pointer' : 'default',
+                    // Inline style override for selected beds to ensure visibility
+                    ...(getBedStatus(bed) === 'selected' && {
+                      backgroundColor: '#cce5ff !important',
+                      borderColor: '#667eea !important',
+                      borderWidth: '3px !important',
+                      transform: 'scale(1.1) !important',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4) !important'
+                    })
+                  }}
                 >
-                  <div className="bed-number">#{bed.bed_number}</div>
+                  <div className="bed-number">
+                    #{bed.bed_number}
+                    {getBedStatus(bed) === 'selected' && <span style={{color: '#667eea', fontWeight: 'bold'}}> ✓</span>}
+                  </div>
                   <div className="bed-status-label">
                     {bed.status === 'occupied' ? (
                       <span className="status-occupied">OCCUPIED</span>
+                    ) : getBedStatus(bed) === 'selected' ? (
+                      <span className="status-selected" style={{color: '#667eea', fontWeight: 'bold'}}>SELECTED</span>
                     ) : (
                       <span className="status-available">AVAILABLE</span>
                     )}
@@ -676,22 +835,110 @@ const StudentDashboard = () => {
                 )}
               </div>
 
-              {/* Bed Layout Modal */}
-              {showBedLayout && selectedRoomDetails && (
-                <div className="bed-layout-overlay">
-                  <BedLayout roomDetails={selectedRoomDetails} />
+
+
+              {/* Alternative Bed Selection - Always shown when room is selected */}
+              {roomChangeRequest.requested_room_id && (
+                <div className="alternative-bed-selection" style={{
+                  marginTop: '20px',
+                  padding: '20px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <h4 style={{ color: '#28a745', marginBottom: '15px' }}>✅ Simple Bed Selection</h4>
+                  <p style={{ marginBottom: '15px' }}>
+                    {(() => {
+                      const selectedRoom = rooms.find(room => room.id == roomChangeRequest.requested_room_id);
+                      return selectedRoom 
+                        ? `Select a bed in Room ${selectedRoom.room_number} (Floor ${selectedRoom.floor}):`
+                        : 'Select a bed from the list below:';
+                    })()}
+                  </p>
+                  <div style={{ marginTop: '10px' }}>
+                    {availableBeds.length > 0 ? (
+                      <div>
+                        <label htmlFor="bedSelect" style={{ fontWeight: 'bold' }}>Available Beds:</label>
+                        <select 
+                          id="bedSelect"
+                          value={roomChangeRequest.requested_bed_number || ''}
+                          onChange={(e) => {
+                            setRoomChangeRequest({
+                              ...roomChangeRequest,
+                              requested_bed_number: e.target.value
+                            });
+                          }}
+                          style={{
+                            marginLeft: '10px',
+                            padding: '10px 12px',
+                            borderRadius: '4px',
+                            border: '2px solid #28a745',
+                            fontSize: '16px',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          <option value="">-- Choose a bed --</option>
+                          {availableBeds.map(bedNumber => (
+                            <option key={bedNumber} value={bedNumber}>
+                              Bed #{bedNumber}
+                            </option>
+                          ))}
+                        </select>
+                        {roomChangeRequest.requested_bed_number && (
+                          <span style={{ marginLeft: '10px', color: '#28a745', fontWeight: 'bold' }}>
+                            ✓ Bed {roomChangeRequest.requested_bed_number} selected!
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ color: '#dc3545', marginBottom: '10px' }}>No available beds loaded yet.</p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const beds = await getAvailableBeds(roomChangeRequest.requested_room_id);
+                            setAvailableBeds(beds);
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Load Available Beds
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Form for reason input */}
               <form onSubmit={handleRoomChangeRequest} className="request-form">
-                {roomChangeRequest.requested_room_id && roomChangeRequest.requested_bed_number && (
+
+
+                {roomChangeRequest.requested_room_id && (
                   <div className="selection-summary">
-                    <h4>Selected Room & Bed</h4>
+                    <h4>
+                      {roomChangeRequest.requested_bed_number ? 'Selected Room & Bed' : 'Selected Room - Choose a Bed'}
+                    </h4>
                     <p>
-                      Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor} | 
-                      Bed {roomChangeRequest.requested_bed_number}
+                      {(() => {
+                        const selectedRoom = rooms.find(room => room.id === roomChangeRequest.requested_room_id);
+                        if (selectedRoom) {
+                          return roomChangeRequest.requested_bed_number 
+                            ? `Room ${selectedRoom.room_number} - Floor ${selectedRoom.floor} | Bed ${roomChangeRequest.requested_bed_number}`
+                            : `Room ${selectedRoom.room_number} - Floor ${selectedRoom.floor} | No bed selected`;
+                        }
+                        return roomChangeRequest.requested_bed_number
+                          ? `Room ID: ${roomChangeRequest.requested_room_id} | Bed ${roomChangeRequest.requested_bed_number}`
+                          : `Room ID: ${roomChangeRequest.requested_room_id} | No bed selected`;
+                      })()}
                     </p>
+
                   </div>
                 )}
 
@@ -713,9 +960,16 @@ const StudentDashboard = () => {
                 <button 
                   type="submit" 
                   className="submit-button"
-                  disabled={!roomChangeRequest.requested_room_id || !roomChangeRequest.requested_bed_number}
+                  disabled={!roomChangeRequest.requested_room_id || !roomChangeRequest.requested_bed_number || !(roomChangeRequest.reason && roomChangeRequest.reason.trim())}
                 >
                   Submit Request
+                  {(!roomChangeRequest.requested_room_id || !roomChangeRequest.requested_bed_number || !(roomChangeRequest.reason && roomChangeRequest.reason.trim())) && 
+                    ` (Missing: ${[
+                      !roomChangeRequest.requested_room_id && 'Room',
+                      !roomChangeRequest.requested_bed_number && 'Bed', 
+                      !(roomChangeRequest.reason && roomChangeRequest.reason.trim()) && 'Reason'
+                    ].filter(Boolean).join(', ')})`
+                  }
                 </button>
               </form>
             </div>
