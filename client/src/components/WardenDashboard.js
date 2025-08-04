@@ -23,6 +23,7 @@ const WardenDashboard = () => {
     roll_no: '',
     stream: '',
     branch: '',
+    password: '',
     // Address fields
     address_line1: '',
     address_line2: '',
@@ -44,14 +45,25 @@ const WardenDashboard = () => {
   const [availableBeds, setAvailableBeds] = useState([]);
   const [bedsLoading, setBedsLoading] = useState(false);
   
-  // Student Management states
+  // Student Management states (EDIT FUNCTIONALITY REMOVED)
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showStudentModal, setShowStudentModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingStudent, setEditingStudent] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [passwordReset, setPasswordReset] = useState(null);
   const [studentsLoading, setStudentsLoading] = useState(false);
+
+  // Tab-specific refresh loading states
+  const [overviewRefreshing, setOverviewRefreshing] = useState(false);
+  const [studentsRefreshing, setStudentsRefreshing] = useState(false);
+  const [roomsRefreshing, setRoomsRefreshing] = useState(false);
+  const [requestsRefreshing, setRequestsRefreshing] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentsPerPage] = useState(5);
+
+  // Add Student form loading state
+  const [addingStudent, setAddingStudent] = useState(false);
 
   // Room change request states
   const [processingRequest, setProcessingRequest] = useState(null);
@@ -67,7 +79,13 @@ const WardenDashboard = () => {
     fetchData();
   }, []);
 
-  // Additional useEffect to fetch students when students tab is activated
+  // Debug log for student count
+  useEffect(() => {
+    console.log('Current students count for overview:', students.length);
+    console.log('Students data:', students);
+  }, [students]);
+
+  // Additional useEffect to fetch students when students tab is activated (only if not already loaded)
   useEffect(() => {
     if (activeTab === 'students' && students.length === 0) {
       console.log('Students tab activated, fetching students...');
@@ -75,15 +93,40 @@ const WardenDashboard = () => {
     }
   }, [activeTab]);
 
-  // Fetch all students when assign tab is activated
+  // Fetch all students when rooms tab is activated (only if not already loaded)
   useEffect(() => {
-    if (activeTab === 'assign') {
-      console.log('Assign tab activated, fetching all students...');
+    if (activeTab === 'rooms' && allStudents.length === 0) {
+      console.log('Rooms tab activated, fetching all students for assignment...');
       fetchAllStudentsForAssignment();
     }
   }, [activeTab]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(students.length / studentsPerPage);
+  const indexOfLastStudent = currentPage * studentsPerPage;
+  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+  const currentStudents = students.slice(indexOfFirstStudent, indexOfLastStudent);
 
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to first page when students data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [students.length]);
 
   const fetchStudentsData = async () => {
     console.log('Fetching students data specifically...');
@@ -100,340 +143,58 @@ const WardenDashboard = () => {
   };
 
   const fetchAllStudentsForAssignment = async () => {
-    try {
-      console.log('Fetching all students for room assignment...');
-      
-      // Fetch all students
-      const allStudentsResult = await apiCall('GET', '/api/warden/students');
-      
-      if (allStudentsResult.success) {
-        const students = allStudentsResult.data || [];
-        console.log('All students fetched:', students.length);
-        
-        // Filter to include only students with roll numbers and names
-        const validStudents = students.filter(student => {
-          return student.roll_no && student.full_name;
-        });
-        
-        setAllStudents(validStudents);
-        console.log('Valid students loaded:', validStudents.length, 'students');
-      } else {
-        console.error('Failed to fetch all students:', allStudentsResult.error);
-        setAllStudents([]);
-      }
-    } catch (error) {
-      console.error('Error fetching all students:', error);
-      setAllStudents([]);
+    console.log('Fetching all students for assignment...');
+    const studentsResult = await apiCall('GET', '/api/warden/students');
+    
+    if (studentsResult.success) {
+      setAllStudents(studentsResult.data);
+      console.log('All students loaded for assignment:', studentsResult.data);
+    } else {
+      console.error('Failed to fetch all students:', studentsResult.error);
+      setMessage(`Error fetching students: ${studentsResult.error}`);
     }
   };
-
+  
   const fetchData = async () => {
-    console.log('=== fetchData called ===');
     setLoading(true);
+    console.log('Fetching all dashboard data...');
     
-    try {
-      // Fetch rooms
-      console.log('Fetching rooms...');
-      const roomsResult = await apiCall('GET', '/api/rooms');
-      if (roomsResult.success) {
-        setRooms(roomsResult.data);
-        console.log('Rooms fetched:', roomsResult.data.length, 'rooms');
-      } else {
-        console.error('Failed to fetch rooms:', roomsResult.error);
-      }
-
-      // Fetch room change requests
-      console.log('Fetching room change requests...');
-      const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
-      if (requestsResult.success) {
-        setRoomChangeRequests(requestsResult.data);
-        console.log('Room change requests fetched:', requestsResult.data.length, 'requests');
-      } else {
-        console.error('Failed to fetch room change requests:', requestsResult.error);
-      }
-
-      // Fetch students list
-      console.log('Fetching students...');
-      const studentsResult = await apiCall('GET', '/api/warden/students');
-      console.log('Students API response:', studentsResult);
-      
-      if (studentsResult.success) {
-        setStudents(studentsResult.data);
-        console.log('Students fetched successfully:', studentsResult.data.length, 'students');
-        console.log('Sample student data:', studentsResult.data[0]);
-      } else {
-        console.error('Failed to fetch students:', studentsResult.error);
-        setMessage(`Error fetching students: ${studentsResult.error}`);
-      }
-    } catch (error) {
-      console.error('Error in fetchData:', error);
-      setMessage('Error loading dashboard data');
+    // Fetch rooms
+    const roomsResult = await apiCall('GET', '/api/rooms');
+    console.log('Rooms API response:', roomsResult);
+    if (roomsResult.success) {
+      setRooms(roomsResult.data);
+    } else {
+      console.error('Failed to fetch rooms:', roomsResult.error);
     }
-    
-    // Fetch all students for room assignment
-    await fetchAllStudentsForAssignment();
+
+    // Fetch room change requests
+    const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
+    console.log('Requests API response:', requestsResult);
+    if (requestsResult.success) {
+      setRoomChangeRequests(requestsResult.data);
+    } else {
+      console.error('Failed to fetch room change requests:', requestsResult.error);
+    }
+
+    // Fetch all students for overview display and general use
+    const studentsResult = await apiCall('GET', '/api/warden/students');
+    console.log('Students API response:', studentsResult);
+    if (studentsResult.success) {
+      setStudents(studentsResult.data);
+      setAllStudents(studentsResult.data); // Set both states for consistent data
+      console.log('✅ Students data loaded on page load for overview display');
+      console.log(`📊 Total students loaded: ${studentsResult.data.length}`);
+      console.log('Students data:', studentsResult.data);
+    } else {
+      console.error('❌ Failed to fetch students:', studentsResult.error);
+      setMessage(`Error fetching students: ${studentsResult.error}`);
+    }
     
     setLoading(false);
-    console.log('=== fetchData completed ===');
   };
 
-  const handleCreateStudent = async (e) => {
-    e.preventDefault();
-    
-    // Client-side validation
-    if (newStudent.phone && !/^[6-9][0-9]{9}$/.test(newStudent.phone)) {
-      setMessage('Error: Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9');
-      setTimeout(() => setMessage(''), 5000);
-      return;
-    }
-    
-    const result = await apiCall('POST', '/api/warden/create-student', newStudent);
-    
-    if (result.success) {
-      const student = result.data.student;
-      const credentials = result.data.credentials;
-      
-      setMessage(`Student created successfully! 
-        
-Student Details:
-- Name: ${student.full_name}
-- Roll No: ${student.roll_no}
-- Stream: ${student.stream}
-- Branch: ${student.branch}
-
-Login Credentials:
-- Username: ${credentials.username} (Roll Number)
-- Password: ${credentials.password}
-
-Please share these credentials with the student.`);
-      
-      setNewStudent({ 
-        full_name: '', 
-        email: '', 
-        phone: '',
-        date_of_birth: '',
-        gender: '',
-        aadhaar_id: '',
-        roll_no: '',
-        stream: '',
-        branch: '',
-        // Address fields
-        address_line1: '',
-        address_line2: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        // Guardian fields
-        guardian_name: '',
-        guardian_address: '',
-        guardian_phone: ''
-      });
-    } else {
-      setMessage(`Error: ${result.error}`);
-    }
-
-    setTimeout(() => setMessage(''), 15000);
-  };
-
-  const handleRoomAssignment = async (e) => {
-    e.preventDefault();
-    
-    // Check if student is already assigned to a room
-    const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
-    if (selectedStudent && (selectedStudent.room_id || selectedStudent.room_number)) {
-      setMessage(`Error: Student ${roomAssignment.studentId} is already assigned to Room ${selectedStudent.room_number || selectedStudent.room_id}. Please select an unassigned student.`);
-      setTimeout(() => setMessage(''), 8000);
-      return;
-    }
-    
-    const result = await apiCall('POST', '/api/warden/assign-room', roomAssignment);
-    
-    if (result.success) {
-      setMessage('Room assigned successfully!');
-      setRoomAssignment({ studentId: '', roomId: '', bedNumber: '' });
-      setSelectedRoomDetails(null);
-      setShowBedLayout(false);
-      setAvailableBeds([]);
-      fetchData(); // Refresh data
-      fetchAllStudentsForAssignment(); // Refresh student list
-    } else {
-      setMessage(`Error: ${result.error}`);
-    }
-
-    setTimeout(() => setMessage(''), 5000);
-  };
-
-  const handleRoomDetails = async (roomId) => {
-    const result = await apiCall('GET', `/api/rooms/${roomId}`);
-    if (result.success) {
-      setSelectedRoom(result.data);
-    }
-  };
-
-  const getAvailableBeds = async (roomId) => {
-    if (!roomId) return [];
-    
-    try {
-      console.log('=== getAvailableBeds called ===');
-      console.log('Room ID:', roomId);
-      
-      // Fetch detailed room information including bed availability
-      const result = await apiCall('GET', `/api/rooms/${roomId}`);
-      console.log('API response success:', result.success);
-      console.log('Full API response:', JSON.stringify(result, null, 2));
-      
-      if (result.success && result.data) {
-        const roomData = result.data;
-        console.log('Room number:', roomData.room_number);
-        console.log('Room capacity:', roomData.capacity);
-        console.log('Beds data type:', typeof roomData.beds);
-        console.log('Beds is array:', Array.isArray(roomData.beds));
-        console.log('Beds length:', roomData.beds ? roomData.beds.length : 'undefined');
-        
-        if (roomData.beds && Array.isArray(roomData.beds)) {
-          console.log('Processing beds array:');
-          roomData.beds.forEach((bed, index) => {
-            console.log(`  Bed ${index + 1}:`, {
-              bed_number: bed.bed_number,
-              status: bed.status,
-              student_id: bed.student_id
-            });
-          });
-          
-          // Return only available bed numbers
-          const availableBeds = roomData.beds
-            .filter(bed => {
-              const isAvailable = bed.status === 'available';
-              console.log(`  Bed ${bed.bed_number}: ${bed.status} -> ${isAvailable ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
-              return isAvailable;
-            })
-            .map(bed => bed.bed_number)
-            .sort((a, b) => a - b);
-          
-          console.log('Final available beds array:', availableBeds);
-          console.log('=== getAvailableBeds completed ===');
-          return availableBeds;
-        } else {
-          console.log('ERROR: No valid beds array found');
-          console.log('beds value:', roomData.beds);
-          return [];
-        }
-      } else {
-        console.log('ERROR: API call failed or no data');
-        console.log('Result success:', result.success);
-        console.log('Result data:', result.data);
-        console.log('Result error:', result.error);
-        return [];
-      }
-    } catch (error) {
-      console.error('EXCEPTION in getAvailableBeds:', error);
-      return [];
-    }
-  };
-
-  // Handle room selection and fetch available beds
-  const handleRoomSelection = async (roomId) => {
-    setRoomAssignment({
-      ...roomAssignment,
-      roomId: roomId,
-      bedNumber: ''
-    });
-
-    if (roomId) {
-      setBedsLoading(true);
-      const beds = await getAvailableBeds(roomId);
-      setAvailableBeds(beds);
-      setBedsLoading(false);
-    } else {
-      setAvailableBeds([]);
-      setBedsLoading(false);
-    }
-  };
-
-  // Handle visual room selection for assignment
-  const handleVisualRoomSelection = async (room) => {
-    if (room.available_beds === 0) return;
-    
-    setRoomAssignment({
-      ...roomAssignment,
-      roomId: room.id,
-      bedNumber: ''
-    });
-
-    setBedsLoading(true);
-    try {
-      const result = await apiCall('GET', `/api/rooms/${room.id}`);
-      if (result.success && result.data) {
-        setSelectedRoomDetails(result.data);
-        setShowBedLayout(true);
-        const beds = await getAvailableBeds(room.id);
-        setAvailableBeds(beds);
-      }
-    } catch (error) {
-      console.error('Error fetching room details:', error);
-    }
-    setBedsLoading(false);
-  };
-
-  // Handle bed selection in visual interface
-  const handleBedSelection = (bedNumber) => {
-    setRoomAssignment({
-      ...roomAssignment,
-      bedNumber: bedNumber
-    });
-  };
-
-  const getRoomStatistics = () => {
-    const totalRooms = rooms.length;
-    const occupiedRooms = rooms.filter(room => room.occupied_beds > 0).length;
-    const totalBeds = rooms.reduce((sum, room) => sum + room.capacity, 0);
-    const occupiedBeds = rooms.reduce((sum, room) => sum + room.occupied_beds, 0);
-    
-    return { totalRooms, occupiedRooms, totalBeds, occupiedBeds };
-  };
-
-  // Handle room change request approval/rejection
-  const handleRequestAction = (request, action) => {
-    setConfirmAction({ type: action, request });
-    setShowConfirmModal(true);
-  };
-
-  const confirmRequestAction = async () => {
-    if (!confirmAction.request || !confirmAction.type) return;
-
-    setProcessingRequest(confirmAction.request.id);
-    
-    try {
-      const endpoint = `/api/warden/room-change-requests/${confirmAction.request.id}/${confirmAction.type}`;
-      const result = await apiCall('PUT', endpoint, {});
-      
-      if (result.success) {
-        setMessage(`Room change request ${confirmAction.type}d successfully!`);
-        fetchData(); // Refresh the data
-      } else {
-        setMessage(`Error: ${result.error}`);
-      }
-    } catch (error) {
-      setMessage(`Error: Failed to ${confirmAction.type} request`);
-    }
-    
-    setProcessingRequest(null);
-    setShowConfirmModal(false);
-    setConfirmAction({ type: '', request: null });
-    setTimeout(() => setMessage(''), 5000);
-  };
-
-  const cancelRequestAction = () => {
-    setShowConfirmModal(false);
-    setConfirmAction({ type: '', request: null });
-  };
-
-  // Student management functions
-  const handleEditStudent = (student) => {
-    setEditingStudent({ ...student });
-    setShowEditModal(true);
-  };
-
+  // Student management functions (EDIT REMOVED)
   const handleViewStudent = (student) => {
     setSelectedStudent(student);
     setShowStudentModal(true);
@@ -448,209 +209,314 @@ Please share these credentials with the student.`);
     setDeleteConfirm(student);
   };
 
-  const handleDeleteStudent = async () => {
-    if (!deleteConfirm) return;
-
-    setStudentsLoading(true);
-    
-    const result = await apiCall('DELETE', `/api/warden/students/${deleteConfirm.id}`);
-    
-    if (result.success) {
-      setMessage('Student deleted successfully!');
-      fetchData(); // Refresh data
-    } else {
-      setMessage(`Error: ${result.error}`);
-    }
-    
-    setDeleteConfirm(null);
-    setStudentsLoading(false);
-    setTimeout(() => setMessage(''), 5000);
-  };
-
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    
-    setStudentsLoading(true);
-    
-    const result = await apiCall('PUT', `/api/warden/students/${editingStudent.id}`, editingStudent);
-    
-    if (result.success) {
-      setMessage('Student updated successfully!');
-      setShowEditModal(false);
-      setEditingStudent(null);
-      fetchData(); // Refresh data
-    } else {
-      setMessage(`Error: ${result.error}`);
-    }
-    
-    setStudentsLoading(false);
-    setTimeout(() => setMessage(''), 5000);
-  };
-
-  const handleCancelEdit = () => {
-    setShowEditModal(false);
-    setEditingStudent(null);
-  };
-
   const handleCancelDelete = () => {
     setDeleteConfirm(null);
   };
 
+  // Room assignment functions
+  const handleRoomChange = async (e) => {
+    const selectedRoomId = e.target.value;
+    setRoomAssignment({
+      ...roomAssignment,
+      roomId: selectedRoomId,
+      bedNumber: ''
+    });
+
+    if (selectedRoomId) {
+      setBedsLoading(true);
+      const beds = await getAvailableBeds(selectedRoomId);
+      setAvailableBeds(beds);
+      setBedsLoading(false);
+    } else {
+      setAvailableBeds([]);
+    }
+  };
+
+  const getAvailableBeds = async (roomId) => {
+    if (!roomId) return [];
+    
+    try {
+      const result = await apiCall('GET', `/api/rooms/${roomId}`);
+      
+      if (result.success && result.data && result.data.beds) {
+        const availableBeds = result.data.beds
+          .filter(bed => bed.status === 'available')
+          .map(bed => bed.bed_number)
+          .sort((a, b) => a - b);
+        
+        return availableBeds;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching beds:', error);
+      return [];
+    }
+  };
+
+  const handleRoomAssignment = async (e) => {
+    e.preventDefault();
+    
+    setStudentsLoading(true);
+    
+    try {
+      const assignmentData = {
+        studentId: roomAssignment.studentId, // This is actually roll number
+        roomId: roomAssignment.roomId,
+        bedNumber: parseInt(roomAssignment.bedNumber)
+      };
+
+      const result = await apiCall('POST', '/api/warden/assign-room', assignmentData);
+      
+      if (result.success) {
+        setMessage('Room assigned successfully!');
+        setRoomAssignment({ studentId: '', roomId: '', bedNumber: '' });
+        setAvailableBeds([]);
+        // Refresh data
+        await fetchData();
+        await fetchAllStudentsForAssignment();
+      } else {
+        setMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    }
+    
+    setStudentsLoading(false);
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  const handleRequestAction = async (request, action) => {
+    try {
+      const result = await apiCall('PUT', `/api/warden/room-change-requests/${request.id}/${action}`, {});
+      
+      if (result.success) {
+        setMessage(`Request ${action}d successfully!`);
+        // Refresh room change requests
+        await fetchData();
+      } else {
+        setMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    }
+    
+    setTimeout(() => setMessage(''), 5000);
+  };
+
+  // Tab-specific refresh functions
+  const refreshOverview = async () => {
+    setOverviewRefreshing(true);
+    console.log('🔄 Refreshing overview data...');
+    
+    try {
+      // Fetch rooms
+      const roomsResult = await apiCall('GET', '/api/rooms');
+      if (roomsResult.success) {
+        setRooms(roomsResult.data);
+      }
+
+      // Fetch room change requests
+      const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
+      if (requestsResult.success) {
+        setRoomChangeRequests(requestsResult.data);
+      }
+
+      // Fetch students
+      const studentsResult = await apiCall('GET', '/api/warden/students');
+      if (studentsResult.success) {
+        setStudents(studentsResult.data);
+        setAllStudents(studentsResult.data);
+      }
+
+      console.log('✅ Overview data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing overview:', error);
+      setMessage('Error refreshing overview data');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setOverviewRefreshing(false);
+    }
+  };
+
+  const refreshStudents = async () => {
+    setStudentsRefreshing(true);
+    console.log('🔄 Refreshing students data...');
+    
+    try {
+      const studentsResult = await apiCall('GET', '/api/warden/students');
+      if (studentsResult.success) {
+        setStudents(studentsResult.data);
+        setAllStudents(studentsResult.data);
+        console.log('✅ Students data refreshed successfully');
+      } else {
+        setMessage('Error refreshing students data');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing students:', error);
+      setMessage('Error refreshing students data');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setStudentsRefreshing(false);
+    }
+  };
+
+  const refreshRooms = async () => {
+    setRoomsRefreshing(true);
+    console.log('🔄 Refreshing rooms data...');
+    
+    try {
+      // Fetch rooms
+      const roomsResult = await apiCall('GET', '/api/rooms');
+      if (roomsResult.success) {
+        setRooms(roomsResult.data);
+      }
+
+      // Fetch students for room assignment
+      const studentsResult = await apiCall('GET', '/api/warden/students');
+      if (studentsResult.success) {
+        setAllStudents(studentsResult.data);
+      }
+
+      console.log('✅ Rooms data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing rooms:', error);
+      setMessage('Error refreshing rooms data');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setRoomsRefreshing(false);
+    }
+  };
+
+  const refreshRequests = async () => {
+    setRequestsRefreshing(true);
+    console.log('🔄 Refreshing requests data...');
+    
+    try {
+      const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
+      if (requestsResult.success) {
+        setRoomChangeRequests(requestsResult.data);
+        console.log('✅ Requests data refreshed successfully');
+      } else {
+        setMessage('Error refreshing requests data');
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing requests:', error);
+      setMessage('Error refreshing requests data');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setRequestsRefreshing(false);
+    }
+  };
+
+  // Add Student functions
+  const handleStudentInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewStudent(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
+  };
+
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    setAddingStudent(true);
+    
+    try {
+      // Validate required fields based on backend requirements
+      const requiredFields = {
+        full_name: 'Full Name',
+        email: 'Email',
+        phone: 'Phone',
+        date_of_birth: 'Date of Birth',
+        gender: 'Gender',
+        aadhaar_id: 'Aadhaar ID',
+        roll_no: 'Roll Number',
+        stream: 'Stream',
+        branch: 'Branch',
+        address_line1: 'Address Line 1',
+        city: 'City',
+        state: 'State',
+        postal_code: 'Postal Code',
+        guardian_name: 'Guardian Name',
+        guardian_address: 'Guardian Address',
+        guardian_phone: 'Guardian Phone'
+      };
+
+      const missingFields = [];
+      for (const [field, label] of Object.entries(requiredFields)) {
+        if (!newStudent[field] || newStudent[field].trim() === '') {
+          missingFields.push(label);
+        }
+      }
+
+      if (missingFields.length > 0) {
+        setMessage(`Error: Please fill in all required fields: ${missingFields.join(', ')}`);
+        setTimeout(() => setMessage(''), 5000);
+        return;
+      }
+
+      // Prepare data for backend (remove password field as backend generates it)
+      const { password, ...studentData } = newStudent;
+      console.log('Adding new student:', studentData);
+      const result = await apiCall('POST', '/api/warden/create-student', studentData);
+      
+      if (result.success) {
+        // Show success message with generated credentials
+        const credentials = result.data?.credentials;
+        let successMessage = 'Student added successfully!';
+        if (credentials) {
+          successMessage += ` Login credentials - Username: ${credentials.username}, Password: ${credentials.password}`;
+        }
+        setMessage(successMessage);
+        
+        // Reset form
+        setNewStudent({
+          full_name: '',
+          email: '',
+          phone: '',
+          date_of_birth: '',
+          gender: '',
+          aadhaar_id: '',
+          roll_no: '',
+          stream: '',
+          branch: '',
+          password: '',
+          address_line1: '',
+          address_line2: '',
+          city: '',
+          state: '',
+          postal_code: '',
+          guardian_name: '',
+          guardian_address: '',
+          guardian_phone: ''
+        });
+        // Refresh students data
+        await refreshStudents();
+        setTimeout(() => setMessage(''), 10000); // Longer timeout for credentials
+      } else {
+        setMessage(`Error: ${result.error}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error adding student:', error);
+      setMessage('Error adding student');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setAddingStudent(false);
+    }
+  };
+  
   if (loading) {
     return <div className="loading">Loading dashboard...</div>;
   }
-
-  const stats = getRoomStatistics();
-
-  // Visual Components for Room Assignment
-  const RoomCardWarden = ({ room }) => {
-    const isSelected = roomAssignment.roomId === room.id;
-    const isUnavailable = room.available_beds === 0;
-    const occupiedBeds = room.capacity - room.available_beds;
-    
-    return (
-      <div 
-        className={`room-card-visual-warden ${isSelected ? 'selected' : ''} ${isUnavailable ? 'unavailable' : ''}`}
-        onClick={() => !isUnavailable && handleVisualRoomSelection(room)}
-        style={{ cursor: isUnavailable ? 'not-allowed' : 'pointer' }}
-      >
-        <div className="room-card-header">
-          <h4>Room {room.room_number}</h4>
-          <span className="floor-tag">Floor {room.floor}</span>
-        </div>
-        <div className="room-card-info">
-          <div className="info-item">
-            <span className="label">Type:</span>
-            <span className="value">{room.room_type}</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Capacity:</span>
-            <span className="value">{room.capacity} beds</span>
-          </div>
-          <div className="info-item">
-            <span className="label">Occupied:</span>
-            <span className={`value ${occupiedBeds > 0 ? 'occupied' : 'empty'}`}>
-              {occupiedBeds} / {room.capacity} beds
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="label">Available:</span>
-            <span className={`value ${room.available_beds === 0 ? 'unavailable' : 'available'}`}>
-              {room.available_beds} beds
-            </span>
-          </div>
-        </div>
-        <div className="room-card-status">
-          {isUnavailable ? (
-            <span className="status-badge unavailable">Full</span>
-          ) : occupiedBeds > 0 ? (
-            <span className="status-badge partial">Partially Occupied</span>
-          ) : (
-            <span className="status-badge available">Available</span>
-          )}
-        </div>
-        
-        {/* Occupancy indicator */}
-        <div className="occupancy-indicator">
-          <div className="occupancy-bar">
-            <div 
-              className="occupancy-fill" 
-              style={{ width: `${(occupiedBeds / room.capacity) * 100}%` }}
-            ></div>
-          </div>
-          <span className="occupancy-text">
-            {Math.round((occupiedBeds / room.capacity) * 100)}% occupied
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  const BedLayoutWarden = ({ roomDetails }) => {
-    if (!roomDetails || !roomDetails.beds) return null;
-
-
-
-    const getBedStatus = (bed) => {
-      if (bed.status === 'occupied') return 'occupied';
-      if (roomAssignment.bedNumber === bed.bed_number) return 'selected';
-      return 'available';
-    };
-
-    return (
-      <div className="bed-layout-container">
-        <div className="bed-layout-header">
-          <div>
-            <h3>Room {roomDetails.room_number} - Floor {roomDetails.floor}</h3>
-            <div className="room-summary">
-              <span className="summary-item">
-                <strong>Type:</strong> {roomDetails.room_type}
-              </span>
-              <span className="summary-item">
-                <strong>Capacity:</strong> {roomDetails.capacity} beds
-              </span>
-              <span className="summary-item">
-                <strong>Occupied:</strong> {roomDetails.beds.filter(bed => bed.status === 'occupied').length} beds
-              </span>
-              <span className="summary-item">
-                <strong>Available:</strong> {roomDetails.beds.filter(bed => bed.status === 'available').length} beds
-              </span>
-            </div>
-            <span className="room-mode-indicator selectable">Select a bed for assignment</span>
-          </div>
-
-        </div>
-        
-        <div className="bed-list-inline">
-          {roomDetails.beds
-            .sort((a, b) => a.bed_number - b.bed_number)
-            .map(bed => (
-              <div
-                key={bed.bed_number}
-                className={`bed-item-inline ${getBedStatus(bed)}`}
-                onClick={() => bed.status === 'available' && handleBedSelection(bed.bed_number)}
-                style={{ cursor: bed.status === 'available' ? 'pointer' : 'default' }}
-              >
-                <div className="bed-info">
-                  <span className="bed-number">Bed #{bed.bed_number}</span>
-                  <span className={`bed-status ${bed.status}`}>
-                    {bed.status === 'occupied' ? 'OCCUPIED' : 'AVAILABLE'}
-                  </span>
-                  {bed.status === 'occupied' && bed.student_name && (
-                    <span className="student-info">by {bed.student_name}</span>
-                  )}
-                </div>
-                {bed.status === 'available' && (
-                  <button className="select-bed-btn" type="button">
-                    Select This Bed
-                  </button>
-                )}
-              </div>
-            ))}
-        </div>
-
-        <div className="bed-summary-inline">
-          <div className="summary-stats">
-            <span className="stat-item available">
-              ✅ {roomDetails.beds.filter(bed => bed.status === 'available').length} Available
-            </span>
-            <span className="stat-item occupied">
-              ❌ {roomDetails.beds.filter(bed => bed.status === 'occupied').length} Occupied
-            </span>
-            <span className="stat-item total">
-              🛏️ {roomDetails.beds.length} Total Beds
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
         <div className="header-content">
-          <h1>Warden Dashboard</h1>
+          <h1>Warden Portal</h1>
           <div className="user-info">
             <span>Welcome, {user.full_name}</span>
             <button onClick={logout} className="logout-button">Logout</button>
@@ -667,1112 +533,1053 @@ Please share these credentials with the student.`);
             Overview
           </button>
           <button 
-            className={`nav-button ${activeTab === 'create' ? 'active' : ''}`}
-            onClick={() => setActiveTab('create')}
-          >
-            Add Student
-          </button>
-          <button 
             className={`nav-button ${activeTab === 'students' ? 'active' : ''}`}
             onClick={() => setActiveTab('students')}
           >
             Students
           </button>
           <button 
-            className={`nav-button ${activeTab === 'assign' ? 'active' : ''}`}
-            onClick={() => setActiveTab('assign')}
+            className={`nav-button ${activeTab === 'add-student' ? 'active' : ''}`}
+            onClick={() => setActiveTab('add-student')}
           >
-            Assign Room
+            Add Student
+          </button>
+          <button 
+            className={`nav-button ${activeTab === 'rooms' ? 'active' : ''}`}
+            onClick={() => setActiveTab('rooms')}
+          >
+            Rooms
           </button>
           <button 
             className={`nav-button ${activeTab === 'requests' ? 'active' : ''}`}
             onClick={() => setActiveTab('requests')}
           >
-            Requests
+            Room Requests
           </button>
         </nav>
 
         <main className="dashboard-main">
           {message && <div className="message">{message}</div>}
+          
 
-          {activeTab === 'overview' && (
-            <div className="overview-section">
-              <div className="section-header">
-                <h2>Hostel Overview</h2>
+          
+          {activeTab === 'students' && (
+            <div className="students-section">
+              {/* Tab Header with Refresh */}
+              <div className="tab-header">
+                <h2>Student Management</h2>
                 <button 
-                  className="refresh-btn"
-                  onClick={() => fetchData()}
-                  title="Refresh Overview Data"
+                  className={`refresh-btn ${studentsRefreshing ? 'refreshing' : ''}`}
+                  onClick={refreshStudents}
+                  disabled={studentsRefreshing}
+                  title="Refresh Students Data"
                 >
-                  🔄
+                  {studentsRefreshing ? '🔄' : '↻'}
                 </button>
               </div>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <h3>Total Rooms</h3>
-                  <div className="stat-number">{stats.totalRooms}</div>
-                </div>
-                <div className="stat-card">
-                  <h3>Occupied Rooms</h3>
-                  <div className="stat-number">{stats.occupiedRooms}</div>
-                </div>
-                <div className="stat-card">
-                  <h3>Total Beds</h3>
-                  <div className="stat-number">{stats.totalBeds}</div>
-                </div>
-                <div className="stat-card">
-                  <h3>Occupied Beds</h3>
-                  <div className="stat-number">{stats.occupiedBeds}</div>
-                </div>
+              
+              <div className={`students-table-container ${studentsRefreshing ? 'loading' : ''}`}>
+                <h3>All Students</h3>
+                <table className="students-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Roll No</th>
+                      <th>Stream</th>
+                      <th>Branch</th>
+                      <th>Room</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentStudents.length > 0 ? (
+                      currentStudents.map(student => (
+                        <tr key={student.id}>
+                          <td>{student.full_name}</td>
+                          <td>{student.roll_no}</td>
+                          <td>{student.stream}</td>
+                          <td>{student.branch}</td>
+                          <td>
+                            {student.room_number ? `Room ${student.room_number}` : 'Not Assigned'}
+                          </td>
+                          <td className="actions">
+                            <button
+                              className="action-btn view-btn"
+                              onClick={() => handleViewStudent(student)}
+                              title="View Details"
+                            >
+                              👁️
+                            </button>
+                            <button
+                              className="action-btn delete-btn"
+                              onClick={() => handleDeleteConfirm(student)}
+                              title="Delete Student"
+                            >
+                              🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="no-students-cell">
+                          <div className="no-students-message">
+                            <div className="empty-icon">👥</div>
+                            <div>No students found</div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Pagination Controls */}
+                {students.length > 0 && (
+                  <div className="pagination-container">
+                    <div className="pagination-info">
+                      <span>
+                        Showing {indexOfFirstStudent + 1} to {Math.min(indexOfLastStudent, students.length)} of {students.length} students
+                      </span>
+                    </div>
+                    <div className="pagination-controls">
+                      <button 
+                        className={`pagination-btn prev-btn ${currentPage === 1 ? 'disabled' : ''}`}
+                        onClick={prevPage}
+                        disabled={currentPage === 1}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      <div className="page-numbers">
+                        {Array.from({ length: totalPages }, (_, index) => (
+                          <button
+                            key={index + 1}
+                            className={`page-btn ${currentPage === index + 1 ? 'active' : ''}`}
+                            onClick={() => paginate(index + 1)}
+                          >
+                            {index + 1}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <button 
+                        className={`pagination-btn next-btn ${currentPage === totalPages ? 'disabled' : ''}`}
+                        onClick={nextPage}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'add-student' && (
+            <div className="add-student-section">
+              {/* Tab Header with Refresh */}
+              <div className="tab-header">
+                <h2>Add New Student</h2>
               </div>
               
-              <div className="quick-info">
-                <h3>Room Occupancy Status</h3>
-                <div className="rooms-grid">
-                  {rooms.slice(0, 10).map(room => (
-                    <div key={room.id} className="room-status-card">
-                      <h4>Room {room.room_number}</h4>
-                      <p>Floor {room.floor}</p>
-                      <div className="occupancy">
-                        {room.occupied_beds}/{room.capacity} beds occupied
+              <div className="add-student-container">
+                <form onSubmit={handleAddStudent} className="add-student-form">
+                  {/* Personal Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">👤</span>
+                      Personal Information
+                    </h3>
+                    
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="full_name">Full Name *</label>
+                        <input
+                          type="text"
+                          id="full_name"
+                          name="full_name"
+                          value={newStudent.full_name}
+                          onChange={handleStudentInputChange}
+                          required
+                          placeholder="Enter full name"
+                        />
                       </div>
-                      <div className={`status ${room.occupied_beds === room.capacity ? 'full' : room.occupied_beds > 0 ? 'partial' : 'empty'}`}>
-                        {room.occupied_beds === room.capacity ? 'Full' : room.occupied_beds > 0 ? 'Partial' : 'Empty'}
+                      
+                      <div className="form-group">
+                        <label htmlFor="email">Email *</label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={newStudent.email}
+                          onChange={handleStudentInputChange}
+                          required
+                          placeholder="Enter email address"
+                        />
+                      </div>
+                      
+                                             <div className="form-group">
+                         <label htmlFor="phone">Phone Number *</label>
+                         <input
+                           type="tel"
+                           id="phone"
+                           name="phone"
+                           value={newStudent.phone}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="Enter 10-digit phone number"
+                         />
+                       </div>
+                       
+                       <div className="form-group">
+                         <label htmlFor="date_of_birth">Date of Birth *</label>
+                         <input
+                           type="date"
+                           id="date_of_birth"
+                           name="date_of_birth"
+                           value={newStudent.date_of_birth}
+                           onChange={handleStudentInputChange}
+                           required
+                         />
+                       </div>
+                       
+                       <div className="form-group">
+                         <label htmlFor="gender">Gender *</label>
+                         <select
+                           id="gender"
+                           name="gender"
+                           value={newStudent.gender}
+                           onChange={handleStudentInputChange}
+                           required
+                         >
+                           <option value="">Select Gender</option>
+                           <option value="Male">Male</option>
+                           <option value="Female">Female</option>
+                           <option value="Other">Other</option>
+                         </select>
+                       </div>
+                       
+                       <div className="form-group">
+                         <label htmlFor="aadhaar_id">Aadhaar ID *</label>
+                         <input
+                           type="text"
+                           id="aadhaar_id"
+                           name="aadhaar_id"
+                           value={newStudent.aadhaar_id}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="Enter 12-digit Aadhaar number"
+                           maxLength="12"
+                           pattern="[0-9]{12}"
+                         />
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Academic Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">🎓</span>
+                      Academic Information
+                    </h3>
+                    
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="roll_no">Roll Number *</label>
+                        <input
+                          type="text"
+                          id="roll_no"
+                          name="roll_no"
+                          value={newStudent.roll_no}
+                          onChange={handleStudentInputChange}
+                          required
+                          placeholder="Enter roll number"
+                        />
+                      </div>
+                      
+                                             <div className="form-group">
+                         <label htmlFor="stream">Stream *</label>
+                         <input
+                           type="text"
+                           id="stream"
+                           name="stream"
+                           value={newStudent.stream}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="e.g., Science, Commerce, Arts"
+                         />
+                       </div>
+                       
+                       <div className="form-group">
+                         <label htmlFor="branch">Branch *</label>
+                         <input
+                           type="text"
+                           id="branch"
+                           name="branch"
+                           value={newStudent.branch}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="e.g., Computer Science, Biology"
+                         />
+                       </div>
+                       
+                       <div className="info-note">
+                         <span className="note-icon">ℹ️</span>
+                         <span>Login credentials will be automatically generated and displayed after student creation.</span>
+                       </div>
+                    </div>
+                  </div>
+
+                                     {/* Address Information Section */}
+                   <div className="form-section">
+                     <h3 className="section-title">
+                       <span className="section-icon">🏠</span>
+                       Address Information
+                     </h3>
+                     
+                     <div className="address-grid">
+                       {/* Address Lines Row */}
+                       <div className="address-row">
+                         <div className="form-group">
+                           <label htmlFor="address_line1">Address Line 1 *</label>
+                           <input
+                             type="text"
+                             id="address_line1"
+                             name="address_line1"
+                             value={newStudent.address_line1}
+                             onChange={handleStudentInputChange}
+                             required
+                             placeholder="Street address, apartment, etc."
+                           />
+                         </div>
+                         
+                         <div className="form-group">
+                           <label htmlFor="address_line2">Address Line 2</label>
+                           <input
+                             type="text"
+                             id="address_line2"
+                             name="address_line2"
+                             value={newStudent.address_line2}
+                             onChange={handleStudentInputChange}
+                             placeholder="Additional address information (optional)"
+                           />
+                         </div>
+                       </div>
+                       
+                       {/* City, State, Postal Code Row */}
+                       <div className="location-row">
+                         <div className="form-group">
+                           <label htmlFor="city">City *</label>
+                           <input
+                             type="text"
+                             id="city"
+                             name="city"
+                             value={newStudent.city}
+                             onChange={handleStudentInputChange}
+                             required
+                             placeholder="Enter city"
+                           />
+                         </div>
+                         
+                         <div className="form-group">
+                           <label htmlFor="state">State *</label>
+                           <input
+                             type="text"
+                             id="state"
+                             name="state"
+                             value={newStudent.state}
+                             onChange={handleStudentInputChange}
+                             required
+                             placeholder="Enter state"
+                           />
+                         </div>
+                         
+                         <div className="form-group">
+                           <label htmlFor="postal_code">Postal Code *</label>
+                           <input
+                             type="text"
+                             id="postal_code"
+                             name="postal_code"
+                             value={newStudent.postal_code}
+                             onChange={handleStudentInputChange}
+                             required
+                             placeholder="Enter 6-digit postal code"
+                             maxLength="6"
+                             pattern="[0-9]{6}"
+                           />
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+
+                  {/* Guardian Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">👨‍👩‍👧‍👦</span>
+                      Guardian Information
+                    </h3>
+                    
+                                         <div className="form-grid">
+                       <div className="form-group">
+                         <label htmlFor="guardian_name">Guardian Name *</label>
+                         <input
+                           type="text"
+                           id="guardian_name"
+                           name="guardian_name"
+                           value={newStudent.guardian_name}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="Enter guardian's name"
+                         />
+                       </div>
+                       
+                       <div className="form-group">
+                         <label htmlFor="guardian_phone">Guardian Phone *</label>
+                         <input
+                           type="tel"
+                           id="guardian_phone"
+                           name="guardian_phone"
+                           value={newStudent.guardian_phone}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="Enter 10-digit guardian's phone"
+                           maxLength="10"
+                           pattern="[6-9][0-9]{9}"
+                         />
+                       </div>
+                       
+                       <div className="form-group full-width">
+                         <label htmlFor="guardian_address">Guardian Address *</label>
+                         <textarea
+                           id="guardian_address"
+                           name="guardian_address"
+                           value={newStudent.guardian_address}
+                           onChange={handleStudentInputChange}
+                           required
+                           placeholder="Enter guardian's address"
+                           rows="3"
+                         />
+                       </div>
+                     </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="form-actions">
+                    <button 
+                      type="submit" 
+                      className="submit-btn"
+                      disabled={addingStudent}
+                    >
+                      {addingStudent ? (
+                        <>
+                          <span className="loading-spinner">⏳</span>
+                          Adding Student...
+                        </>
+                      ) : (
+                        <>
+                          <span className="submit-icon">➕</span>
+                          Add Student
+                        </>
+                      )}
+                    </button>
+                    
+                    <button 
+                      type="button" 
+                      className="reset-btn"
+                      onClick={() => setNewStudent({
+                        full_name: '',
+                        email: '',
+                        phone: '',
+                        date_of_birth: '',
+                        gender: '',
+                        aadhaar_id: '',
+                        roll_no: '',
+                        stream: '',
+                        branch: '',
+                        password: '',
+                        address_line1: '',
+                        address_line2: '',
+                        city: '',
+                        state: '',
+                        postal_code: '',
+                        guardian_name: '',
+                        guardian_address: '',
+                        guardian_phone: ''
+                      })}
+                    >
+                      <span className="reset-icon">🔄</span>
+                      Reset Form
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'overview' && (
+            <div className="overview-section">
+              {/* Tab Header with Refresh */}
+              <div className="tab-header">
+                <h2>Overview</h2>
+                <button 
+                  className={`refresh-btn ${overviewRefreshing ? 'refreshing' : ''}`}
+                  onClick={refreshOverview}
+                  disabled={overviewRefreshing}
+                  title="Refresh Overview Data"
+                >
+                  {overviewRefreshing ? '🔄' : '↻'}
+                </button>
+              </div>
+
+              {/* Main Stats Grid */}
+              <div className={`stats-grid ${overviewRefreshing ? 'loading' : ''}`}>
+                <div className="stat-card primary">
+                  <div className="stat-icon">👥</div>
+                  <div className="stat-content">
+                    <h3>Total Students</h3>
+                    <div className="stat-number">{students.length}</div>
+                    <div className="stat-description">Registered students</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card success">
+                  <div className="stat-icon">🏢</div>
+                  <div className="stat-content">
+                    <h3>Total Rooms</h3>
+                    <div className="stat-number">{rooms.length}</div>
+                    <div className="stat-description">Available rooms</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card warning">
+                  <div className="stat-icon">⏳</div>
+                  <div className="stat-content">
+                    <h3>Pending Requests</h3>
+                    <div className="stat-number">{roomChangeRequests.filter(req => req.status === 'pending').length}</div>
+                    <div className="stat-description">Awaiting approval</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card info">
+                  <div className="stat-icon">🛏️</div>
+                  <div className="stat-content">
+                    <h3>Available Beds</h3>
+                    <div className="stat-number">
+                      {rooms.reduce((total, room) => total + (room.available_beds || 0), 0)}
+                    </div>
+                    <div className="stat-description">Ready for assignment</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Secondary Stats Grid */}
+              <div className={`secondary-stats-grid ${overviewRefreshing ? 'loading' : ''}`}>
+                <div className="stat-card secondary">
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-content">
+                    <h3>Assigned Students</h3>
+                    <div className="stat-number">{students.filter(s => s.room_number || s.room_id).length}</div>
+                    <div className="stat-description">Students with rooms</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card secondary">
+                  <div className="stat-icon">❌</div>
+                  <div className="stat-content">
+                    <h3>Unassigned Students</h3>
+                    <div className="stat-number">{students.filter(s => !s.room_number && !s.room_id).length}</div>
+                    <div className="stat-description">Need room assignment</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card secondary">
+                  <div className="stat-icon">📋</div>
+                  <div className="stat-content">
+                    <h3>Total Requests</h3>
+                    <div className="stat-number">{roomChangeRequests.length}</div>
+                    <div className="stat-description">All time requests</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card secondary">
+                  <div className="stat-icon">🎯</div>
+                  <div className="stat-content">
+                    <h3>Occupancy Rate</h3>
+                    <div className="stat-number">
+                      {rooms.length > 0 ? Math.round(((rooms.reduce((total, room) => total + (room.capacity || 0), 0) - rooms.reduce((total, room) => total + (room.available_beds || 0), 0)) / rooms.reduce((total, room) => total + (room.capacity || 0), 0)) * 100) : 0}%
+                    </div>
+                    <div className="stat-description">Bed utilization</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className={`quick-actions ${overviewRefreshing ? 'loading' : ''}`}>
+                <h3>🚀 Quick Actions</h3>
+                <div className="actions-grid">
+                  <button className="action-card" onClick={() => setActiveTab('rooms')}>
+                    <div className="action-icon">🏠</div>
+                    <div className="action-title">Assign Rooms</div>
+                    <div className="action-description">Assign students to available rooms</div>
+                  </button>
+                  
+                  <button className="action-card" onClick={() => setActiveTab('requests')}>
+                    <div className="action-icon">📝</div>
+                    <div className="action-title">Review Requests</div>
+                    <div className="action-description">Approve or reject room change requests</div>
+                  </button>
+                  
+                  <button className="action-card" onClick={() => setActiveTab('students')}>
+                    <div className="action-icon">👥</div>
+                    <div className="action-title">Manage Students</div>
+                    <div className="action-description">View and manage student information</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className={`recent-activity ${overviewRefreshing ? 'loading' : ''}`}>
+                <h3>📊 Recent Activity</h3>
+                <div className="activity-list">
+                  {roomChangeRequests.slice(0, 5).map(request => (
+                    <div key={request.id} className="activity-item">
+                      <div className="activity-icon">
+                        {request.status === 'pending' ? '⏳' : request.status === 'approved' ? '✅' : '❌'}
+                      </div>
+                      <div className="activity-content">
+                        <div className="activity-title">
+                          {request.student_name} requested room change
+                        </div>
+                        <div className="activity-description">
+                          {request.current_room || 'No room'} → Room {request.requested_room} • 
+                          <span className={`status-inline ${request.status}`}> {request.status}</span>
+                        </div>
+                        <div className="activity-time">
+                          {new Date(request.requested_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {roomChangeRequests.length === 0 && (
+                    <div className="no-activity">
+                      <div className="no-activity-icon">📭</div>
+                      <div>No recent room change requests</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'rooms' && (
+            <div className="rooms-section">
+              {/* Tab Header with Refresh */}
+              <div className="tab-header">
+                <h2>Room Management & Assignment</h2>
+                <button 
+                  className={`refresh-btn ${roomsRefreshing ? 'refreshing' : ''}`}
+                  onClick={refreshRooms}
+                  disabled={roomsRefreshing}
+                  title="Refresh Rooms Data"
+                >
+                  {roomsRefreshing ? '🔄' : '↻'}
+                </button>
+              </div>
+              
+              {/* Room Assignment Form */}
+              <div className={`room-assignment-container ${roomsRefreshing ? 'loading' : ''}`}>
+                <h3>Assign Room to Student</h3>
+                <form onSubmit={handleRoomAssignment} className="assignment-form">
+                  <div className="selection-dropdowns">
+                    <div className="form-group">
+                      <label htmlFor="studentSelect">1. Select Student</label>
+                      <select
+                        id="studentSelect"
+                        value={roomAssignment.studentId}
+                        onChange={(e) => setRoomAssignment({
+                          ...roomAssignment,
+                          studentId: e.target.value,
+                          roomId: '',
+                          bedNumber: ''
+                        })}
+                        required
+                      >
+                        <option value="">-- Select Student --</option>
+                        {allStudents.filter(student => !student.room_number && !student.room_id).map(student => (
+                          <option key={student.id} value={student.roll_no}>
+                            {student.full_name} - {student.roll_no} - Unassigned
+                          </option>
+                        ))}
+                        {allStudents.filter(student => student.room_number || student.room_id).map(student => (
+                          <option key={student.id} value={student.roll_no}>
+                            {student.full_name} - {student.roll_no} - Assigned (Room {student.room_number || 'Unknown'})
+                          </option>
+                        ))}
+                      </select>
+                      
+                      
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="roomSelect">2. Select Room</label>
+                      <select
+                        id="roomSelect"
+                        value={roomAssignment.roomId}
+                        onChange={handleRoomChange}
+                        required
+                        disabled={!roomAssignment.studentId}
+                      >
+                        <option value="">-- Select Room --</option>
+                        {rooms.filter(room => (room.available_beds || 0) > 0).map(room => (
+                          <option key={room.id} value={room.id}>
+                            Room {room.room_number} - Floor {room.floor} ({room.available_beds} beds available)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="bedSelect">3. Select Bed</label>
+                      <select
+                        id="bedSelect"
+                        value={roomAssignment.bedNumber}
+                        onChange={(e) => setRoomAssignment({
+                          ...roomAssignment,
+                          bedNumber: e.target.value
+                        })}
+                        required
+                        disabled={!roomAssignment.roomId || bedsLoading}
+                      >
+                        <option value="">-- Select Bed --</option>
+                        {availableBeds.map(bedNumber => (
+                          <option key={bedNumber} value={bedNumber}>
+                            Bed {bedNumber}
+                          </option>
+                        ))}
+                      </select>
+                      {bedsLoading && <span className="loading-text">Loading beds...</span>}
+                    </div>
+                  </div>
+
+                  {/* Current Room Details */}
+                  {roomAssignment.studentId && (
+                    <div className="student-room-details">
+                      {(() => {
+                        const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
+                        if (!selectedStudent) return null;
+                        
+                        if (selectedStudent.room_number || selectedStudent.room_id) {
+                          return (
+                            <div className="current-assignment-card">
+                              <h4>📍 Current Room Assignment</h4>
+                              <div className="assignment-details">
+                                <div className="detail-row">
+                                  <span className="label">Student:</span>
+                                  <span className="value">{selectedStudent.full_name}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Roll Number:</span>
+                                  <span className="value">{selectedStudent.roll_no}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Current Room:</span>
+                                  <span className="value highlight">Room {selectedStudent.room_number || 'Unknown'}</span>
+                                </div>
+                                {selectedStudent.bed_number && (
+                                  <div className="detail-row">
+                                    <span className="label">Current Bed:</span>
+                                    <span className="value highlight">Bed {selectedStudent.bed_number}</span>
+                                  </div>
+                                )}
+                                <div className="detail-row">
+                                  <span className="label">Stream:</span>
+                                  <span className="value">{selectedStudent.stream || 'Not specified'}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Branch:</span>
+                                  <span className="value">{selectedStudent.branch || 'Not specified'}</span>
+                                </div>
+                              </div>
+                              <div className="assignment-note">
+                                <strong>Note:</strong> This student is already assigned to a room. Proceeding will reassign them to a new room.
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="no-assignment-card">
+                              <h4>✅ Student Status</h4>
+                              <div className="assignment-details">
+                                <div className="detail-row">
+                                  <span className="label">Student:</span>
+                                  <span className="value">{selectedStudent.full_name}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Roll Number:</span>
+                                  <span className="value">{selectedStudent.roll_no}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Room Status:</span>
+                                  <span className="value unassigned">Not Assigned</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Stream:</span>
+                                  <span className="value">{selectedStudent.stream || 'Not specified'}</span>
+                                </div>
+                                <div className="detail-row">
+                                  <span className="label">Branch:</span>
+                                  <span className="value">{selectedStudent.branch || 'Not specified'}</span>
+                                </div>
+                              </div>
+                              <div className="assignment-note success">
+                                <strong>Ready:</strong> This student is available for room assignment.
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  )}
+                  
+                  <button 
+                    type="submit" 
+                    className="assign-button"
+                    disabled={!roomAssignment.studentId || !roomAssignment.roomId || !roomAssignment.bedNumber}
+                  >
+                    Assign Room
+                  </button>
+                </form>
+              </div>
+
+              {/* Rooms Overview */}
+              <div className={`rooms-overview ${roomsRefreshing ? 'loading' : ''}`}>
+                <h3>All Rooms</h3>
+                <div className="rooms-grid">
+                  {rooms.map(room => (
+                    <div key={room.id} className="room-card">
+                      <div className="room-header">
+                        <h4>Room {room.room_number}</h4>
+                        <span className="floor-badge">Floor {room.floor}</span>
+                      </div>
+                      <div className="room-details">
+                        <p><strong>Type:</strong> {room.room_type}</p>
+                        <p><strong>Capacity:</strong> {room.capacity} beds</p>
+                        <p><strong>Occupied:</strong> {(room.capacity || 0) - (room.available_beds || 0)} beds</p>
+                        <p><strong>Available:</strong> {room.available_beds || 0} beds</p>
+                      </div>
+                      <div className="room-status">
+                        {(room.available_beds || 0) === 0 ? (
+                          <span className="status-full">Full</span>
+                        ) : (
+                          <span className="status-available">Available</span>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          {activeTab === 'create' && (
-            <div className="create-student-section">
-              <div className="section-header">
-                <h2>Create Student Account</h2>
-                <button 
-                  className="refresh-btn"
-                  onClick={() => setNewStudent({
-                    full_name: '', email: '', phone: '', date_of_birth: '', gender: '',
-                    aadhaar_id: '', roll_no: '', stream: '', branch: '',
-                    address_line1: '', address_line2: '', city: '', state: '', postal_code: '',
-                    guardian_name: '', guardian_address: '', guardian_phone: ''
-                  })}
-                  title="Clear Form"
-                >
-                  🗑️
-                </button>
-              </div>
-              <form onSubmit={handleCreateStudent} className="student-form">
-                
-                {/* Personal Information Section */}
-                <div className="form-section">
-                  <h3 className="form-section-title">Personal Information</h3>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="full_name">Full Name *</label>
-                      <input
-                        type="text"
-                        id="full_name"
-                        value={newStudent.full_name}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          full_name: e.target.value
-                        })}
-                        required
-                        placeholder="Enter full name"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="date_of_birth">Date of Birth *</label>
-                      <input
-                        type="date"
-                        id="date_of_birth"
-                        value={newStudent.date_of_birth}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          date_of_birth: e.target.value
-                        })}
-                        required
-                        max={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="gender">Gender *</label>
-                      <select
-                        id="gender"
-                        value={newStudent.gender}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          gender: e.target.value
-                        })}
-                        required
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="aadhaar_id">Aadhaar ID *</label>
-                      <input
-                        type="text"
-                        id="aadhaar_id"
-                        value={newStudent.aadhaar_id}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          aadhaar_id: e.target.value.replace(/\D/g, '').slice(0, 12)
-                        })}
-                        required
-                        placeholder="Enter 12-digit Aadhaar ID"
-                        pattern="[0-9]{12}"
-                        maxLength="12"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Information Section */}
-                <div className="form-section">
-                  <h3 className="form-section-title">Contact Information</h3>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="email">Email Address</label>
-                      <input
-                        type="email"
-                        id="email"
-                        value={newStudent.email}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          email: e.target.value
-                        })}
-                        placeholder="Enter email address"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="phone">Phone Number *</label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        value={newStudent.phone}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setNewStudent({
-                            ...newStudent,
-                            phone: value
-                          });
-                        }}
-                        required
-                        placeholder="Enter 10-digit mobile number"
-                        pattern="^[6-9][0-9]{9}$"
-                        maxLength="10"
-                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
-                      />
-                      {newStudent.phone && newStudent.phone.length > 0 && newStudent.phone.length < 10 && (
-                        <span className="validation-error">Phone number must be 10 digits</span>
-                      )}
-                      {newStudent.phone && newStudent.phone.length === 10 && !/^[6-9]/.test(newStudent.phone) && (
-                        <span className="validation-error">Phone number must start with 6, 7, 8, or 9</span>
-                      )}
-                      {newStudent.phone && newStudent.phone.length === 10 && /^[6-9][0-9]{9}$/.test(newStudent.phone) && (
-                        <span className="validation-success">✓ Valid phone number</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Academic Information Section */}
-                <div className="form-section">
-                  <h3 className="form-section-title">Academic Information</h3>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="roll_no">Roll Number *</label>
-                      <input
-                        type="text"
-                        id="roll_no"
-                        value={newStudent.roll_no}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          roll_no: e.target.value.toUpperCase()
-                        })}
-                        required
-                        placeholder="Enter roll number (will be used as username)"
-                      />
-                      <small className="field-note">Note: Roll number will be used as the login username</small>
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="stream">Stream *</label>
-                      <select
-                        id="stream"
-                        value={newStudent.stream}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          stream: e.target.value
-                        })}
-                        required
-                      >
-                        <option value="">Select Stream</option>
-                        <option value="Engineering">Engineering</option>
-                        <option value="Medical">Medical</option>
-                        <option value="Commerce">Commerce</option>
-                        <option value="Arts">Arts</option>
-                        <option value="Science">Science</option>
-                        <option value="Management">Management</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="branch">Branch *</label>
-                      <input
-                        type="text"
-                        id="branch"
-                        value={newStudent.branch}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          branch: e.target.value
-                        })}
-                        required
-                        placeholder="Enter branch/specialization"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Information Section */}
-                <div className="form-section">
-                  <h3 className="form-section-title">Address Information</h3>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="address_line1">Address Line 1 *</label>
-                      <input
-                        type="text"
-                        id="address_line1"
-                        value={newStudent.address_line1}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          address_line1: e.target.value
-                        })}
-                        required
-                        placeholder="Enter address line 1"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="address_line2">Address Line 2</label>
-                      <input
-                        type="text"
-                        id="address_line2"
-                        value={newStudent.address_line2}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          address_line2: e.target.value
-                        })}
-                        placeholder="Enter address line 2 (optional)"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="city">City *</label>
-                      <input
-                        type="text"
-                        id="city"
-                        value={newStudent.city}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          city: e.target.value
-                        })}
-                        required
-                        placeholder="Enter city"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="state">State *</label>
-                      <input
-                        type="text"
-                        id="state"
-                        value={newStudent.state}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          state: e.target.value
-                        })}
-                        required
-                        placeholder="Enter state"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="postal_code">Postal Code *</label>
-                      <input
-                        type="text"
-                        id="postal_code"
-                        value={newStudent.postal_code}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                          setNewStudent({
-                            ...newStudent,
-                            postal_code: value
-                          });
-                        }}
-                        required
-                        placeholder="Enter 6-digit postal code"
-                        pattern="^[0-9]{6}$"
-                        maxLength="6"
-                        title="Please enter a valid 6-digit postal code"
-                      />
-                      {newStudent.postal_code && newStudent.postal_code.length > 0 && newStudent.postal_code.length < 6 && (
-                        <span className="validation-error">Postal code must be 6 digits</span>
-                      )}
-                      {newStudent.postal_code && newStudent.postal_code.length === 6 && (
-                        <span className="validation-success">✓ Valid postal code</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Guardian Information Section */}
-                <div className="form-section">
-                  <h3 className="form-section-title">Guardian Information</h3>
-                  
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label htmlFor="guardian_name">Guardian Name *</label>
-                      <input
-                        type="text"
-                        id="guardian_name"
-                        value={newStudent.guardian_name}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          guardian_name: e.target.value
-                        })}
-                        required
-                        placeholder="Enter guardian's full name"
-                      />
-                    </div>
-                    
-                    <div className="form-group">
-                      <label htmlFor="guardian_phone">Guardian Phone *</label>
-                      <input
-                        type="tel"
-                        id="guardian_phone"
-                        value={newStudent.guardian_phone}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                          setNewStudent({
-                            ...newStudent,
-                            guardian_phone: value
-                          });
-                        }}
-                        required
-                        placeholder="Enter 10-digit mobile number"
-                        pattern="^[6-9][0-9]{9}$"
-                        maxLength="10"
-                        title="Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9"
-                      />
-                      {newStudent.guardian_phone && newStudent.guardian_phone.length > 0 && newStudent.guardian_phone.length < 10 && (
-                        <span className="validation-error">Phone number must be 10 digits</span>
-                      )}
-                      {newStudent.guardian_phone && newStudent.guardian_phone.length === 10 && !/^[6-9]/.test(newStudent.guardian_phone) && (
-                        <span className="validation-error">Phone number must start with 6, 7, 8, or 9</span>
-                      )}
-                      {newStudent.guardian_phone && newStudent.guardian_phone.length === 10 && /^[6-9][0-9]{9}$/.test(newStudent.guardian_phone) && (
-                        <span className="validation-success">✓ Valid phone number</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="form-row">
-                    <div className="form-group full-width">
-                      <label htmlFor="guardian_address">Guardian Address *</label>
-                      <textarea
-                        id="guardian_address"
-                        value={newStudent.guardian_address}
-                        onChange={(e) => setNewStudent({
-                          ...newStudent,
-                          guardian_address: e.target.value
-                        })}
-                        required
-                        placeholder="Enter guardian's complete address"
-                        rows="3"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-actions">
-                  <button type="submit" className="submit-button">
-                    Create Student Account
-                  </button>
-                  <button 
-                    type="button" 
-                    className="reset-button"
-                    onClick={() => setNewStudent({
-                      full_name: '',
-                      email: '',
-                      phone: '',
-                      date_of_birth: '',
-                      gender: '',
-                      aadhaar_id: '',
-                      roll_no: '',
-                      stream: '',
-                      branch: '',
-                      address_line1: '',
-                      address_line2: '',
-                      city: '',
-                      state: '',
-                      postal_code: '',
-                      guardian_name: '',
-                      guardian_address: '',
-                      guardian_phone: ''
-                    })}
-                  >
-                    Reset Form
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {activeTab === 'students' && (
-            <div className="students-list-section">
-              <div className="section-header">
-                <h2>Students List</h2>
-                <button 
-                  className="refresh-btn"
-                  onClick={() => fetchStudentsData()}
-                  title="Refresh Students Data"
-                >
-                  🔄
-                </button>
-              </div>
-              
-              <div className="students-summary">
-                <p>Total Students: <strong>{students.length}</strong></p>
-              </div>
-
-              {students.length === 0 ? (
-                <div className="no-students">
-                  <p>No students found. Create a student account first.</p>
-                </div>
-              ) : (
-                <div className="students-table-container">
-                  <table className="students-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Roll No</th>
-                        <th>Phone</th>
-                        <th>Date of Birth</th>
-                        <th>Stream</th>
-                        <th>Room</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map(student => (
-                        <tr key={student.id}>
-                          <td className="student-name">{student.full_name}</td>
-                          <td className="roll-no">{student.roll_no}</td>
-                          <td className="phone">{student.phone}</td>
-                          <td className="dob">
-                            {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="stream">{student.stream}</td>
-                          <td className="room">
-                            {student.room_number ? `Room ${student.room_number}` : 'Not Assigned'}
-                          </td>
-                                                     <td className="actions">
-                             <button
-                               className="action-btn view-btn"
-                               onClick={() => handleViewStudent(student)}
-                               title="View Details"
-                             >
-                               👁️
-                             </button>
-                             <button
-                               className="action-btn edit-btn"
-                               onClick={() => handleEditStudent(student)}
-                               title="Edit Student"
-                             >
-                               ✏️
-                             </button>
-                             <button
-                               className="action-btn delete-btn"
-                               onClick={() => handleDeleteConfirm(student)}
-                               title="Delete Student"
-                             >
-                               🗑️
-                             </button>
-                           </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'assign' && (
-            <div className="assign-section">
-              <div className="section-header">
-                <h2>Assign Room to Student</h2>
-                <button 
-                  className="refresh-btn"
-                  onClick={() => fetchData()}
-                  title="Refresh Room Data"
-                >
-                  🔄
-                </button>
-              </div>
-              {/* Enhanced Student Selection */}
-              <div className="student-selection-section">
-                <div className="section-header-inline">
-                  <h3>Select Student to Assign</h3>
-                  <button 
-                    type="button"
-                    className="refresh-students-btn"
-                    onClick={fetchAllStudentsForAssignment}
-                    title="Refresh Student List"
-                  >
-                    🔄 Refresh Students
-                  </button>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="student_dropdown">Choose Student</label>
-                  <select
-                    id="student_dropdown"
-                    value={roomAssignment.studentId}
-                    onChange={(e) => setRoomAssignment({
-                      ...roomAssignment,
-                      studentId: e.target.value
-                    })}
-                    required
-                    className="student-dropdown"
-                    disabled={allStudents.length === 0}
-                  >
-                    <option value="">
-                      {allStudents.length === 0 
-                        ? "No students available" 
-                        : `Select from ${allStudents.length} students...`}
-                    </option>
-                    {allStudents
-                      .sort((a, b) => a.roll_no?.localeCompare(b.roll_no) || 0)
-                      .map(student => (
-                      <option key={student.id} value={student.roll_no}>
-                        {student.roll_no || 'NO-ROLL'} - {student.full_name || 'Unknown Name'}{(student.room_id || student.room_number) && ' [ASSIGNED]'}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="field-note">
-                    {allStudents.length} students available
-                    {allStudents.length === 0 && (
-                      <span className="error-note"> - No students found in the system</span>
-                    )}
-                  </small>
-                </div>
-              </div>
-
-              {/* Visual Room Selection */}
-              <div className="visual-room-selection-warden">
-                <h3>Select Room</h3>
-                <p className="selection-hint">Click on any available room to see bed layout below and make assignment</p>
-                <div className="rooms-grid-warden">
-                  {rooms
-                    .filter(room => room.available_beds > 0)
-                    .sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }))
-                    .map(room => (
-                      <RoomCardWarden key={room.id} room={room} />
-                    ))}
-                </div>
-                
-                {rooms.filter(room => room.available_beds > 0).length === 0 && (
-                  <div className="no-rooms-message">
-                    <p>No rooms with available beds found.</p>
-                  </div>
-                )}
-
-                {/* Inline Bed Layout */}
-                {showBedLayout && selectedRoomDetails && (
-                  <div className="bed-layout-inline">
-                    <div className="bed-layout-inline-header">
-                      <h4>Select a Bed from Room {selectedRoomDetails.room_number}</h4>
-                      <button 
-                        className="clear-selection-btn"
-                        onClick={() => {
-                          setShowBedLayout(false);
-                          setSelectedRoomDetails(null);
-                          setRoomAssignment({
-                            ...roomAssignment,
-                            roomId: '',
-                            bedNumber: ''
-                          });
-                        }}
-                        title="Clear room selection"
-                      >
-                        ✕ Clear Selection
-                      </button>
-                    </div>
-                    <BedLayoutWarden roomDetails={selectedRoomDetails} />
-                  </div>
-                )}
-              </div>
-
-              {/* Assignment Summary and Submit */}
-              <form onSubmit={handleRoomAssignment} className="assignment-summary-form">
-                {roomAssignment.studentId && roomAssignment.roomId && roomAssignment.bedNumber && (
-                  <div className="assignment-summary">
-                    <h4>Assignment Summary</h4>
-                    {(() => {
-                      const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
-                      const isAlreadyAssigned = selectedStudent && (selectedStudent.room_id || selectedStudent.room_number);
-                      
-                      return (
-                        <>
-                          {isAlreadyAssigned && (
-                            <div className="assignment-warning">
-                              ⚠️ <strong>Warning:</strong> This student is already assigned to Room {selectedStudent.room_number || selectedStudent.room_id}. 
-                              Please select an unassigned student.
-                            </div>
-                          )}
-                          <div className="summary-details">
-                            <div className="summary-item">
-                              <strong>Student:</strong> 
-                              <span className="student-details">
-                                <span className="roll-number">{roomAssignment.studentId}</span>
-                                <span className="student-name">
-                                  {selectedStudent?.full_name || 'Unknown Student'}
-                                </span>
-                                <span className="student-stream">
-                                  {selectedStudent?.stream || ''} 
-                                  {selectedStudent?.branch || ''}
-                                </span>
-                                {isAlreadyAssigned && <span className="already-assigned-badge">[ALREADY ASSIGNED]</span>}
-                              </span>
-                            </div>
-                            <div className="summary-item">
-                              <strong>Room:</strong> 
-                              Room {selectedRoomDetails?.room_number} - Floor {selectedRoomDetails?.floor}
-                            </div>
-                            <div className="summary-item">
-                              <strong>Bed:</strong> 
-                              Bed #{roomAssignment.bedNumber}
-                            </div>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {(() => {
-                  const selectedStudent = allStudents.find(s => s.roll_no === roomAssignment.studentId);
-                  const isAlreadyAssigned = selectedStudent && (selectedStudent.room_id || selectedStudent.room_number);
-                  const isFormValid = roomAssignment.studentId && roomAssignment.roomId && roomAssignment.bedNumber && !isAlreadyAssigned;
-                  
-                  return (
-                    <button 
-                      type="submit" 
-                      className="submit-button"
-                      disabled={!isFormValid}
-                    >
-                      {isAlreadyAssigned ? 'Student Already Assigned' : 'Assign Room to Student'}
-                    </button>
-                  );
-                })()}
-              </form>
             </div>
           )}
 
           {activeTab === 'requests' && (
             <div className="requests-section">
-              <div className="section-header">
+              {/* Tab Header with Refresh */}
+              <div className="tab-header">
                 <h2>Room Change Requests</h2>
                 <button 
-                  className="refresh-btn"
-                  onClick={() => fetchData()}
+                  className={`refresh-btn ${requestsRefreshing ? 'refreshing' : ''}`}
+                  onClick={refreshRequests}
+                  disabled={requestsRefreshing}
                   title="Refresh Requests Data"
                 >
-                  🔄
+                  {requestsRefreshing ? '🔄' : '↻'}
                 </button>
               </div>
-              {roomChangeRequests.length === 0 ? (
-                <p>No room change requests at this time.</p>
-              ) : (
-                <div className="requests-list">
-                  {roomChangeRequests.map(request => (
-                    <div key={request.id} className="request-card">
-                      <div className="request-header">
-                        <h4>{request.student_name}</h4>
-                        <span className={`status-badge ${request.status}`}>
-                          {request.status}
-                        </span>
-                      </div>
-                      <div className="request-details">
-                        <p><strong>Current Room:</strong> {request.current_room || 'Not assigned'}</p>
-                        <p><strong>Requested Room:</strong> {request.requested_room} (Bed {request.requested_bed_number})</p>
-                        <p><strong>Reason:</strong> {request.reason}</p>
-                        <p><strong>Requested Date:</strong> {new Date(request.requested_at).toLocaleDateString()}</p>
-                      </div>
-                      {request.status === 'pending' && (
-                        <div className="request-actions">
-                          <button 
-                            className="approve-button"
-                            onClick={() => handleRequestAction(request, 'approve')}
-                            disabled={processingRequest === request.id}
-                          >
-                            {processingRequest === request.id ? 'Processing...' : 'Approve'}
-                          </button>
-                          <button 
-                            className="reject-button"
-                            onClick={() => handleRequestAction(request, 'reject')}
-                            disabled={processingRequest === request.id}
-                          >
-                            {processingRequest === request.id ? 'Processing...' : 'Reject'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              
+              <div className={`requests-table-container ${requestsRefreshing ? 'loading' : ''}`}>
+                <table className="requests-table">
+                  <thead>
+                    <tr>
+                      <th>Student</th>
+                      <th>Current Room</th>
+                      <th>Requested Room</th>
+                      <th>Bed</th>
+                      <th>Reason</th>
+                      <th>Date</th>
+                      <th>Status/Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roomChangeRequests.map(request => (
+                      <tr key={request.id}>
+                        <td>{request.student_name}</td>
+                        <td>{request.current_room || 'None'}</td>
+                        <td>Room {request.requested_room}</td>
+                        <td>Bed {request.requested_bed_number}</td>
+                        <td className="reason-cell">{request.reason}</td>
+                        <td>{new Date(request.requested_at).toLocaleDateString()}</td>
+                        <td className="status-action-cell">
+                          {request.status === 'pending' ? (
+                            <div className="action-buttons">
+                              <button 
+                                className="action-btn approve-btn"
+                                onClick={() => handleRequestAction(request, 'approve')}
+                                title="Approve Request"
+                              >
+                                ✅
+                              </button>
+                              <button 
+                                className="action-btn reject-btn"
+                                onClick={() => handleRequestAction(request, 'reject')}
+                                title="Reject Request"
+                              >
+                                ❌
+                              </button>
+                            </div>
+                          ) : (
+                            <span className={`status-badge ${request.status}`}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {roomChangeRequests.length === 0 && (
+                  <div className="no-requests">
+                    <p>No room change requests found.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* Confirmation Modal for Room Change Requests */}
-      {showConfirmModal && (
-        <div className="modal-overlay">
-          <div className="modal-content confirmation-modal">
-            <h3>Confirm Action</h3>
-            <p>
-              Are you sure you want to <strong>{confirmAction.type}</strong> the room change request from{' '}
-              <strong>{confirmAction.request?.student_name}</strong>?
-            </p>
-            
-            {confirmAction.type === 'approve' && (
-              <div className="action-details">
-                <p><strong>Student:</strong> {confirmAction.request?.student_name}</p>
-                <p><strong>From:</strong> {confirmAction.request?.current_room || 'Not assigned'}</p>
-                <p><strong>To:</strong> {confirmAction.request?.requested_room} (Bed {confirmAction.request?.requested_bed_number})</p>
-                <p><strong>Reason:</strong> {confirmAction.request?.reason}</p>
+      {/* Enhanced Student View Modal */}
+      {showStudentModal && selectedStudent && (
+        <div className="modal-overlay" onClick={handleCloseStudentModal}>
+          <div className="modal-content enhanced-student-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="enhanced-modal-header">
+              <div className="student-avatar">
+                <div className="avatar-circle">
+                  {selectedStudent.full_name?.charAt(0).toUpperCase()}
+                </div>
               </div>
-            )}
-            
-            <div className="modal-actions">
-              <button 
-                className="cancel-button" 
-                onClick={cancelRequestAction}
-              >
-                Cancel
-              </button>
-              <button 
-                className={`confirm-button ${confirmAction.type === 'approve' ? 'approve' : 'reject'}`}
-                onClick={confirmRequestAction}
-              >
-                {confirmAction.type === 'approve' ? 'Approve Request' : 'Reject Request'}
+              <div className="header-info">
+                <h2 className="student-modal-name">{selectedStudent.full_name}</h2>
+                <div className="student-badge-info">
+                  <span className="roll-badge">{selectedStudent.roll_no}</span>
+                  <span className="stream-badge">{selectedStudent.stream} - {selectedStudent.branch}</span>
+                </div>
+              </div>
+              <button className="enhanced-close-btn" onClick={handleCloseStudentModal} title="Close">
+                ✕
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-             {/* View Student Details Modal */}
-       {showStudentModal && selectedStudent && (
-         <div className="modal-overlay">
-           <div className="modal-content view-student-modal">
-             <div className="modal-header">
-               <h3>Student Details</h3>
-               <button 
-                 className="close-btn"
-                 onClick={handleCloseStudentModal}
-                 title="Close"
-               >
-                 ✖️
-               </button>
-             </div>
-             
-             <div className="student-details-container">
-               {/* Personal Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">📋 Personal Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Full Name:</span>
-                     <span className="value">{selectedStudent.full_name}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Date of Birth:</span>
-                     <span className="value">
-                       {selectedStudent.date_of_birth 
-                         ? new Date(selectedStudent.date_of_birth).toLocaleDateString() 
-                         : 'N/A'}
-                     </span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Gender:</span>
-                     <span className="value">{selectedStudent.gender || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Aadhaar ID:</span>
-                     <span className="value">{selectedStudent.aadhaar_id || 'N/A'}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Contact Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">📞 Contact Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Email:</span>
-                     <span className="value">{selectedStudent.email || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Phone:</span>
-                     <span className="value">{selectedStudent.phone}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Address Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">🏠 Address Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Address Line 1:</span>
-                     <span className="value">{selectedStudent.address_line1 || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Address Line 2:</span>
-                     <span className="value">{selectedStudent.address_line2 || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">City:</span>
-                     <span className="value">{selectedStudent.city || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">State:</span>
-                     <span className="value">{selectedStudent.state || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Postal Code:</span>
-                     <span className="value">{selectedStudent.postal_code || 'N/A'}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Guardian Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">👨‍👩‍👦 Guardian Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Guardian Name:</span>
-                     <span className="value">{selectedStudent.guardian_name || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Guardian Phone:</span>
-                     <span className="value">{selectedStudent.guardian_phone || 'N/A'}</span>
-                   </div>
-                   <div className="detail-item full-width">
-                     <span className="label">Guardian Address:</span>
-                     <span className="value">{selectedStudent.guardian_address || 'N/A'}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Academic Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">🎓 Academic Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Roll Number:</span>
-                     <span className="value roll-highlight">{selectedStudent.roll_no}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Username:</span>
-                     <span className="value">{selectedStudent.username}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Stream:</span>
-                     <span className="value">{selectedStudent.stream}</span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">Branch:</span>
-                     <span className="value">{selectedStudent.branch}</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Room Assignment Section */}
-               <div className="details-section">
-                 <h4 className="section-title">🏠 Room Assignment</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Room:</span>
-                     <span className={`value ${selectedStudent.room_number ? 'room-assigned' : 'room-unassigned'}`}>
-                       {selectedStudent.room_number ? `Room ${selectedStudent.room_number}` : 'Not Assigned'}
-                     </span>
-                   </div>
-                   {selectedStudent.bed_number && (
-                     <div className="detail-item">
-                       <span className="label">Bed Number:</span>
-                       <span className="value">Bed {selectedStudent.bed_number}</span>
-                     </div>
-                   )}
-                 </div>
-               </div>
-
-               {/* Account Information Section */}
-               <div className="details-section">
-                 <h4 className="section-title">⚙️ Account Information</h4>
-                 <div className="details-grid">
-                   <div className="detail-item">
-                     <span className="label">Account Created:</span>
-                     <span className="value">
-                       {selectedStudent.created_at 
-                         ? new Date(selectedStudent.created_at).toLocaleString() 
-                         : 'N/A'}
-                     </span>
-                   </div>
-                   <div className="detail-item">
-                     <span className="label">First Login Status:</span>
-                     <span className={`value ${selectedStudent.first_login ? 'first-login-pending' : 'first-login-completed'}`}>
-                       {selectedStudent.first_login ? 'Password Change Required' : 'Completed'}
-                     </span>
-                   </div>
-                 </div>
-               </div>
-             </div>
-
-             <div className="modal-actions">
-               <button 
-                 className="confirm-button approve"
-                 onClick={handleCloseStudentModal}
-               >
-                 Close
-               </button>
-             </div>
-           </div>
-         </div>
-       )}
-
-       {/* Edit Student Modal */}
-       {showEditModal && editingStudent && (
-         <div className="modal-overlay">
-           <div className="modal-content edit-student-modal">
-             <h3>Edit Student</h3>
-            <form onSubmit={handleSaveEdit} className="edit-student-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="edit_full_name">Full Name</label>
-                  <input
-                    type="text"
-                    id="edit_full_name"
-                    value={editingStudent.full_name}
-                    onChange={(e) => setEditingStudent({
-                      ...editingStudent,
-                      full_name: e.target.value
-                    })}
-                    required
-                  />
+            {/* Modal Content */}
+            <div className="enhanced-modal-content">
+              {/* Personal Information Section */}
+              <div className="info-section personal-info">
+                <div className="section-header">
+                  <span className="section-icon">👤</span>
+                  <h3>Personal Information</h3>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="edit_email">Email</label>
-                  <input
-                    type="email"
-                    id="edit_email"
-                    value={editingStudent.email}
-                    onChange={(e) => setEditingStudent({
-                      ...editingStudent,
-                      email: e.target.value
-                    })}
-                  />
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>📧 Email</label>
+                    <span>{selectedStudent.email || 'Not provided'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>📱 Phone</label>
+                    <span>{selectedStudent.phone || 'Not provided'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>🎂 Date of Birth</label>
+                    <span>{selectedStudent.date_of_birth || 'Not provided'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>👫 Gender</label>
+                    <span>{selectedStudent.gender || 'Not specified'}</span>
+                  </div>
+                  <div className="info-item full-width">
+                    <label>🆔 Aadhaar ID</label>
+                    <span>{selectedStudent.aadhaar_id || 'Not provided'}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="edit_phone">Phone</label>
-                  <input
-                    type="tel"
-                    id="edit_phone"
-                    value={editingStudent.phone}
-                    onChange={(e) => setEditingStudent({
-                      ...editingStudent,
-                      phone: e.target.value.replace(/\D/g, '').slice(0, 10)
-                    })}
-                    pattern="^[6-9][0-9]{9}$"
-                    maxLength="10"
-                    required
-                  />
+              {/* Academic Information Section */}
+              <div className="info-section academic-info">
+                <div className="section-header">
+                  <span className="section-icon">🎓</span>
+                  <h3>Academic Information</h3>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="edit_stream">Stream</label>
-                  <select
-                    id="edit_stream"
-                    value={editingStudent.stream}
-                    onChange={(e) => setEditingStudent({
-                      ...editingStudent,
-                      stream: e.target.value
-                    })}
-                    required
-                  >
-                    <option value="">Select Stream</option>
-                    <option value="Engineering">Engineering</option>
-                    <option value="Medical">Medical</option>
-                    <option value="Commerce">Commerce</option>
-                    <option value="Arts">Arts</option>
-                    <option value="Science">Science</option>
-                    <option value="Management">Management</option>
-                  </select>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>📚 Stream</label>
+                    <span>{selectedStudent.stream || 'Not specified'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>🏛️ Branch</label>
+                    <span>{selectedStudent.branch || 'Not specified'}</span>
+                  </div>
+                  <div className="info-item">
+                    <label>📋 Roll Number</label>
+                    <span className="highlight-text">{selectedStudent.roll_no}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="edit_branch">Branch</label>
-                  <input
-                    type="text"
-                    id="edit_branch"
-                    value={editingStudent.branch}
-                    onChange={(e) => setEditingStudent({
-                      ...editingStudent,
-                      branch: e.target.value
-                    })}
-                    required
-                  />
+              {/* Room Assignment Section */}
+              <div className="info-section room-info">
+                <div className="section-header">
+                  <span className="section-icon">🏠</span>
+                  <h3>Room Assignment</h3>
+                </div>
+                <div className="room-assignment-status">
+                  {selectedStudent.room_number ? (
+                    <div className="assigned-room">
+                      <div className="room-details">
+                        <div className="room-number">
+                          <span className="room-label">Room</span>
+                          <span className="room-value">{selectedStudent.room_number}</span>
+                        </div>
+                        <div className="bed-number">
+                          <span className="bed-label">Bed</span>
+                          <span className="bed-value">{selectedStudent.bed_number || 'TBD'}</span>
+                        </div>
+                      </div>
+                      <div className="assignment-status assigned">
+                        <span className="status-icon">✅</span>
+                        <span>Room Assigned</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="unassigned-room">
+                      <div className="assignment-status unassigned">
+                        <span className="status-icon">❌</span>
+                        <span>No Room Assigned</span>
+                      </div>
+                      <p className="unassigned-note">This student needs to be assigned to a room.</p>
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
 
-              <div className="modal-actions">
-                <button type="button" className="cancel-button" onClick={handleCancelEdit}>
-                  Cancel
-                </button>
-                <button type="submit" className="confirm-button approve" disabled={studentsLoading}>
-                  {studentsLoading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
+            {/* Modal Footer */}
+            <div className="enhanced-modal-footer">
+              <button className="close-button" onClick={handleCloseStudentModal}>
+                <span className="button-icon">👍</span>
+                Got it
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1798,7 +1605,7 @@ Please share these credentials with the student.`);
               </button>
               <button 
                 className="confirm-button reject" 
-                onClick={handleDeleteStudent}
+                onClick={() => console.log('Delete functionality would go here')}
                 disabled={studentsLoading}
               >
                 {studentsLoading ? 'Deleting...' : 'Delete Student'}
