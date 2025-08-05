@@ -18,6 +18,22 @@ app:
     secret: hostel_management_secret_key_2024_spring_boot_version
     expiration: 86400000 # 24 hours in milliseconds
 
+# OpenAPI/Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+    use-root-path: true
+  show-actuator: false
+  writer-with-default-pretty-printer: true
+
 logging:
   level:
     com.hostel: DEBUG
