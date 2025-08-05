@@ -25,7 +25,8 @@ let db = {
   rooms: [],
   beds: [],
   food_menu: [],
-  room_change_requests: []
+  room_change_requests: [],
+  personal_details_requests: []
 };
 
 // Load database from file or create initial data
@@ -339,7 +340,11 @@ app.post('/api/student/room-change-request', authenticateToken, (req, res) => {
   }
 
   try {
-    const { requested_room_id, reason } = req.body;
+    const { requestedRoomId, requestedBedNumber, reason } = req.body;
+
+    if (!requestedRoomId || !requestedBedNumber) {
+      return res.status(400).json({ error: 'Room ID and bed number are required' });
+    }
 
     // Get current room of student
     const currentBed = db.beds.find(bed => bed.student_id === req.user.id);
@@ -349,7 +354,9 @@ app.post('/api/student/room-change-request', authenticateToken, (req, res) => {
       id: requestId,
       student_id: req.user.id,
       current_room_id: currentBed ? currentBed.room_id : null,
-      requested_room_id: parseInt(requested_room_id),
+      current_bed_number: currentBed ? currentBed.bed_number : null,
+      requested_room_id: parseInt(requestedRoomId),
+      requested_bed_number: parseInt(requestedBedNumber),
       reason,
       status: 'pending',
       requested_at: new Date().toISOString(),
@@ -423,6 +430,307 @@ app.get('/api/student/my-room', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Get my room error:', error);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Change password
+app.post('/api/change-password', authenticateToken, (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Both current and new passwords are required' });
+    }
+
+    const user = db.users.find(u => u.id === req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = bcrypt.compareSync(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = bcrypt.hashSync(newPassword, 10);
+    user.password = hashedNewPassword;
+    user.updated_at = new Date().toISOString();
+
+    saveDatabase();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Get all students (for warden)
+app.get('/api/warden/students', authenticateToken, (req, res) => {
+  if (req.user.role !== 'warden') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const students = db.users.filter(u => u.role === 'student').map(student => {
+      // Find student's current bed assignment
+      const bed = db.beds.find(b => b.student_id === student.id);
+      const room = bed ? db.rooms.find(r => r.id === bed.room_id) : null;
+
+      return {
+        ...student,
+        password: undefined, // Don't send password hash
+        room_number: room ? room.room_number : null,
+        room_id: room ? room.id : null,
+        bed_number: bed ? bed.bed_number : null,
+        floor: room ? room.floor : null
+      };
+    });
+
+    res.json(students);
+  } catch (error) {
+    console.error('Get students error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get warden contact information (for students)
+app.get('/api/student/warden-contact', authenticateToken, (req, res) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const warden = db.users.find(u => u.role === 'warden');
+    if (!warden) {
+      return res.status(404).json({ error: 'Warden contact not found' });
+    }
+
+    res.json({
+      name: warden.full_name,
+      email: warden.email,
+      phone: warden.phone,
+      emergency_contact: warden.phone, // Using same phone as emergency for now
+      office_hours: 'Monday - Friday: 9:00 AM - 5:00 PM'
+    });
+  } catch (error) {
+    console.error('Get warden contact error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Handle room change request action (approve/reject)
+app.put('/api/warden/room-change-requests/:id/:action', authenticateToken, (req, res) => {
+  if (req.user.role !== 'warden') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const requestId = parseInt(req.params.id);
+    const action = req.params.action;
+    const { comments } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    const request = db.room_change_requests.find(r => r.id === requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: 'Request already processed' });
+    }
+
+    // Update request status
+    request.status = action === 'approve' ? 'approved' : 'rejected';
+    request.processed_at = new Date().toISOString();
+    request.processed_by = req.user.id;
+    request.comments = comments || null;
+
+    // If approved, handle the room change
+    if (action === 'approve') {
+      // Find student's current bed
+      const currentBed = db.beds.find(b => b.student_id === request.student_id);
+      
+      // Find requested bed
+      const requestedBed = db.beds.find(b => 
+        b.room_id === request.requested_room_id && 
+        b.bed_number === request.requested_bed_number
+      );
+
+      if (!requestedBed) {
+        return res.status(400).json({ error: 'Requested bed not found' });
+      }
+
+      if (requestedBed.status === 'occupied') {
+        return res.status(400).json({ error: 'Requested bed is no longer available' });
+      }
+
+      // Free up current bed
+      if (currentBed) {
+        currentBed.student_id = null;
+        currentBed.status = 'available';
+        currentBed.updated_at = new Date().toISOString();
+      }
+
+      // Assign new bed
+      requestedBed.student_id = request.student_id;
+      requestedBed.status = 'occupied';
+      requestedBed.updated_at = new Date().toISOString();
+    }
+
+    saveDatabase();
+
+    res.json({ 
+      message: `Room change request ${action}d successfully`,
+      request: {
+        ...request,
+        student_name: db.users.find(u => u.id === request.student_id)?.full_name || 'Unknown'
+      }
+    });
+  } catch (error) {
+    console.error('Process room change request error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+// Submit personal details update request
+app.post('/api/student/personal-details-update-request', authenticateToken, (req, res) => {
+  if (req.user.role !== 'student') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const {
+      phone,
+      address_line1,
+      address_line2,
+      city,
+      state,
+      postal_code,
+      guardian_name,
+      guardian_phone,
+      guardian_address
+    } = req.body;
+
+    const requestId = getNextId('personal_details_requests');
+
+    const newRequest = {
+      id: requestId,
+      student_id: req.user.id,
+      phone,
+      address_line1,
+      address_line2,
+      city,
+      state,
+      postal_code,
+      guardian_name,
+      guardian_phone,
+      guardian_address,
+      status: 'pending',
+      requested_at: new Date().toISOString(),
+      processed_at: null,
+      processed_by: null,
+      comments: null
+    };
+
+    db.personal_details_requests.push(newRequest);
+    saveDatabase();
+
+    res.json({ message: 'Personal details update request submitted successfully' });
+  } catch (error) {
+    console.error('Submit personal details request error:', error);
+    res.status(500).json({ error: 'Failed to submit request' });
+  }
+});
+
+// Get personal details update requests (for warden)
+app.get('/api/warden/personal-details-update-requests', authenticateToken, (req, res) => {
+  if (req.user.role !== 'warden') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const requestsWithDetails = db.personal_details_requests.map(request => {
+      const student = db.users.find(u => u.id === request.student_id);
+      
+      return {
+        ...request,
+        student_name: student ? student.full_name : 'Unknown',
+        student_roll_number: student ? student.username : 'Unknown'
+      };
+    }).sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at));
+
+    res.json(requestsWithDetails);
+  } catch (error) {
+    console.error('Get personal details requests error:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Handle personal details update request action (approve/reject)
+app.put('/api/warden/personal-details-update-requests/:id/:action', authenticateToken, (req, res) => {
+  if (req.user.role !== 'warden') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  try {
+    const requestId = parseInt(req.params.id);
+    const action = req.params.action;
+    const { comments } = req.body;
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+
+    const request = db.personal_details_requests.find(r => r.id === requestId);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: 'Request already processed' });
+    }
+
+    // Update request status
+    request.status = action === 'approve' ? 'approved' : 'rejected';
+    request.processed_at = new Date().toISOString();
+    request.processed_by = req.user.id;
+    request.comments = comments || null;
+
+    // If approved, update student's profile
+    if (action === 'approve') {
+      const student = db.users.find(u => u.id === request.student_id);
+      if (student) {
+        student.phone = request.phone || student.phone;
+        student.address_line1 = request.address_line1 || student.address_line1;
+        student.address_line2 = request.address_line2 || student.address_line2;
+        student.city = request.city || student.city;
+        student.state = request.state || student.state;
+        student.postal_code = request.postal_code || student.postal_code;
+        student.guardian_name = request.guardian_name || student.guardian_name;
+        student.guardian_phone = request.guardian_phone || student.guardian_phone;
+        student.guardian_address = request.guardian_address || student.guardian_address;
+        student.updated_at = new Date().toISOString();
+      }
+    }
+
+    saveDatabase();
+
+    res.json({ 
+      message: `Personal details request ${action}d successfully`,
+      request: {
+        ...request,
+        student_name: db.users.find(u => u.id === request.student_id)?.full_name || 'Unknown'
+      }
+    });
+  } catch (error) {
+    console.error('Process personal details request error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
   }
 });
 
