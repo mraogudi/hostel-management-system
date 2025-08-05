@@ -30,18 +30,62 @@ let db = {
 };
 
 // Load database from file or create initial data
-try {
-  if (fs.existsSync(dbPath)) {
-    const data = fs.readFileSync(dbPath, 'utf8');
-    db = JSON.parse(data);
-    console.log('Database loaded from file');
-  } else {
+function loadDatabase() {
+  try {
+    if (fs.existsSync(dbPath)) {
+      console.log('Loading database from file...');
+      const data = fs.readFileSync(dbPath, 'utf8');
+      const loadedDb = JSON.parse(data);
+      
+      // Validate database structure
+      const requiredCollections = ['users', 'rooms', 'beds', 'food_menu', 'room_change_requests', 'personal_details_requests'];
+      const missingCollections = requiredCollections.filter(collection => !loadedDb[collection]);
+      
+      if (missingCollections.length > 0) {
+        console.warn(`Missing collections in database: ${missingCollections.join(', ')}`);
+        // Initialize missing collections as empty arrays
+        missingCollections.forEach(collection => {
+          loadedDb[collection] = [];
+        });
+      }
+      
+      db = loadedDb;
+      console.log(`✅ Database loaded successfully!`);
+      console.log(`📊 Database statistics:`);
+      console.log(`   - Users: ${db.users.length} (${db.users.filter(u => u.role === 'warden').length} wardens, ${db.users.filter(u => u.role === 'student').length} students)`);
+      console.log(`   - Rooms: ${db.rooms.length}`);
+      console.log(`   - Beds: ${db.beds.length} (${db.beds.filter(b => b.status === 'occupied').length} occupied, ${db.beds.filter(b => b.status === 'available').length} available)`);
+      console.log(`   - Food Menu Items: ${db.food_menu.length}`);
+      console.log(`   - Room Change Requests: ${db.room_change_requests.length}`);
+      console.log(`   - Personal Details Requests: ${db.personal_details_requests.length}`);
+      
+      // Find and display default login credentials
+      const warden = db.users.find(u => u.role === 'warden');
+      if (warden) {
+        console.log(`\n🔐 Default Login Credentials:`);
+        console.log(`   Warden - Username: ${warden.username}, Password: warden123`);
+        const students = db.users.filter(u => u.role === 'student').slice(0, 3);
+        students.forEach(student => {
+          console.log(`   Student - Username: ${student.username}, Password: password123`);
+        });
+        if (students.length < db.users.filter(u => u.role === 'student').length) {
+          console.log(`   ... and ${db.users.filter(u => u.role === 'student').length - students.length} more students`);
+        }
+      }
+      
+    } else {
+      console.log('Database file not found. Creating new database...');
+      initializeDatabase();
+    }
+  } catch (error) {
+    console.error('❌ Error loading database:', error.message);
+    console.log('Creating new database with default data...');
     initializeDatabase();
   }
-} catch (error) {
-  console.error('Error loading database:', error);
-  initializeDatabase();
 }
+
+// Initialize database loading
+loadDatabase();
 
 function initializeDatabase() {
   console.log('Initializing new database...');

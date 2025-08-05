@@ -1,0 +1,476 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "warden",
+      "password": "$2a$10$8K1p/a0dLRA/CDDEFGH/MOBr8Ti.JHAc1rQD4QXq2qE0QyOKs6a8i",
+      "role": "warden",
+      "full_name": "Dr. Sarah Williams",
+      "email": "warden@hostel.edu",
+      "phone": "9876543210",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "username": "ST001",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "John Smith",
+      "email": "john.smith@student.edu",
+      "phone": "9876543211",
+      "address_line1": "123 Main Street",
+      "address_line2": "Apartment 2B",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "postal_code": "400001",
+      "guardian_name": "Robert Smith",
+      "guardian_phone": "9876543212",
+      "guardian_address": "123 Main Street, Mumbai, Maharashtra 400001",
+      "created_at": "2024-01-16T09:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "username": "ST002",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "Emily Johnson",
+      "email": "emily.johnson@student.edu",
+      "phone": "9876543213",
+      "address_line1": "456 Oak Avenue",
+      "city": "Delhi",
+      "state": "Delhi",
+      "postal_code": "110001",
+      "guardian_name": "Michael Johnson",
+      "guardian_phone": "9876543214",
+      "guardian_address": "456 Oak Avenue, Delhi, Delhi 110001",
+      "created_at": "2024-01-16T10:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "username": "ST003",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "Rajesh Kumar",
+      "email": "rajesh.kumar@student.edu",
+      "phone": "9876543215",
+      "address_line1": "789 Garden Road",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "postal_code": "560001",
+      "guardian_name": "Suresh Kumar",
+      "guardian_phone": "9876543216",
+      "guardian_address": "789 Garden Road, Bangalore, Karnataka 560001",
+      "created_at": "2024-01-16T11:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "username": "ST004",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "Priya Patel",
+      "email": "priya.patel@student.edu",
+      "phone": "9876543217",
+      "address_line1": "321 Hill View",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "postal_code": "411001",
+      "guardian_name": "Amit Patel",
+      "guardian_phone": "9876543218",
+      "guardian_address": "321 Hill View, Pune, Maharashtra 411001",
+      "created_at": "2024-01-16T12:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "username": "ST005",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "Alex Chen",
+      "email": "alex.chen@student.edu",
+      "phone": "9876543219",
+      "created_at": "2024-01-16T13:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "username": "ST006",
+      "password": "$2a$10$xvuCkk8hb1DI1hCq.VhPveo9L6XqbEr6DjLs2bXwefGaR5LKOme9K",
+      "role": "student",
+      "full_name": "Maria Garcia",
+      "email": "maria.garcia@student.edu",
+      "phone": "9876543220",
+      "created_at": "2024-01-16T14:00:00.000Z"
+    }
+  ],
+  "rooms": [
+    {
+      "id": 1,
+      "room_number": "R001",
+      "floor": 1,
+      "capacity": 3,
+      "occupied_beds": 3,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "room_number": "R002",
+      "floor": 1,
+      "capacity": 3,
+      "occupied_beds": 2,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "room_number": "R003",
+      "floor": 1,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "room_number": "R004",
+      "floor": 1,
+      "capacity": 3,
+      "occupied_beds": 1,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "room_number": "R005",
+      "floor": 2,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "deluxe",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "room_number": "R006",
+      "floor": 2,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "room_number": "R007",
+      "floor": 2,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "room_number": "R008",
+      "floor": 2,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "room_number": "R009",
+      "floor": 3,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "room_number": "R010",
+      "floor": 3,
+      "capacity": 3,
+      "occupied_beds": 0,
+      "room_type": "standard",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    }
+  ],
+  "beds": [
+    {"id": 1, "room_id": 1, "bed_number": 1, "student_id": 2, "status": "occupied"},
+    {"id": 2, "room_id": 1, "bed_number": 2, "student_id": 3, "status": "occupied"},
+    {"id": 3, "room_id": 1, "bed_number": 3, "student_id": 4, "status": "occupied"},
+    {"id": 4, "room_id": 2, "bed_number": 1, "student_id": 5, "status": "occupied"},
+    {"id": 5, "room_id": 2, "bed_number": 2, "student_id": 6, "status": "occupied"},
+    {"id": 6, "room_id": 2, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 7, "room_id": 3, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 8, "room_id": 3, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 9, "room_id": 3, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 10, "room_id": 4, "bed_number": 1, "student_id": 7, "status": "occupied"},
+    {"id": 11, "room_id": 4, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 12, "room_id": 4, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 13, "room_id": 5, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 14, "room_id": 5, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 15, "room_id": 5, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 16, "room_id": 6, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 17, "room_id": 6, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 18, "room_id": 6, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 19, "room_id": 7, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 20, "room_id": 7, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 21, "room_id": 7, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 22, "room_id": 8, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 23, "room_id": 8, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 24, "room_id": 8, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 25, "room_id": 9, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 26, "room_id": 9, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 27, "room_id": 9, "bed_number": 3, "student_id": null, "status": "available"},
+    {"id": 28, "room_id": 10, "bed_number": 1, "student_id": null, "status": "available"},
+    {"id": 29, "room_id": 10, "bed_number": 2, "student_id": null, "status": "available"},
+    {"id": 30, "room_id": 10, "bed_number": 3, "student_id": null, "status": "available"}
+  ],
+  "food_menu": [
+    {
+      "id": 1,
+      "meal_type": "breakfast",
+      "day_of_week": "Monday",
+      "items": "Bread, Butter, Jam, Tea/Coffee, Boiled Eggs",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "meal_type": "lunch",
+      "day_of_week": "Monday",
+      "items": "Rice, Dal, Vegetable Curry, Chapati, Pickle, Papad",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "meal_type": "dinner",
+      "day_of_week": "Monday",
+      "items": "Rice, Sambar, Dry Vegetable, Chapati, Curd, Sweet",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "meal_type": "breakfast",
+      "day_of_week": "Tuesday",
+      "items": "Poha, Tea/Coffee, Banana, Nuts",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "meal_type": "lunch",
+      "day_of_week": "Tuesday",
+      "items": "Rice, Rasam, Vegetable Curry, Chapati, Papad, Salad",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "meal_type": "dinner",
+      "day_of_week": "Tuesday",
+      "items": "Rice, Dal, Mixed Vegetable, Chapati, Pickle, Yogurt",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "meal_type": "breakfast",
+      "day_of_week": "Wednesday",
+      "items": "Idli, Sambar, Chutney, Tea/Coffee",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "meal_type": "lunch",
+      "day_of_week": "Wednesday",
+      "items": "Rice, Curd, Vegetable, Chapati, Pickle, Dal",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "meal_type": "dinner",
+      "day_of_week": "Wednesday",
+      "items": "Rice, Dal, Fry, Chapati, Salad, Sweet",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "meal_type": "breakfast",
+      "day_of_week": "Thursday",
+      "items": "Upma, Tea/Coffee, Seasonal Fruit",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 11,
+      "meal_type": "lunch",
+      "day_of_week": "Thursday",
+      "items": "Rice, Sambar, Vegetable Curry, Chapati, Pickle, Papad",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 12,
+      "meal_type": "dinner",
+      "day_of_week": "Thursday",
+      "items": "Rice, Dal, Cauliflower, Chapati, Curd, Pickle",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 13,
+      "meal_type": "breakfast",
+      "day_of_week": "Friday",
+      "items": "Dosa, Sambar, Chutney, Tea/Coffee",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 14,
+      "meal_type": "lunch",
+      "day_of_week": "Friday",
+      "items": "Rice, Rasam, Vegetable, Chapati, Curd, Pickle",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 15,
+      "meal_type": "dinner",
+      "day_of_week": "Friday",
+      "items": "Rice, Dal, Paneer Curry, Chapati, Salad, Sweet",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 16,
+      "meal_type": "breakfast",
+      "day_of_week": "Saturday",
+      "items": "Paratha, Pickle, Curd, Tea/Coffee, Egg Curry",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 17,
+      "meal_type": "lunch",
+      "day_of_week": "Saturday",
+      "items": "Rice, Sambar, Mixed Vegetable, Chapati, Papad, Curd",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 18,
+      "meal_type": "dinner",
+      "day_of_week": "Saturday",
+      "items": "Rice, Dal, Okra Fry, Chapati, Pickle, Yogurt",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 19,
+      "meal_type": "breakfast",
+      "day_of_week": "Sunday",
+      "items": "Puri, Aloo Sabzi, Tea/Coffee, Sweets",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 20,
+      "meal_type": "lunch",
+      "day_of_week": "Sunday",
+      "items": "Rice, Special Dal, Vegetable, Chapati, Pickle, Ice Cream",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "id": 21,
+      "meal_type": "dinner",
+      "day_of_week": "Sunday",
+      "items": "Rice, Chicken Curry, Vegetable, Chapati, Salad, Sweet",
+      "created_at": "2024-01-15T08:00:00.000Z"
+    }
+  ],
+  "room_change_requests": [
+    {
+      "id": 1,
+      "student_id": 2,
+      "current_room_id": 1,
+      "current_bed_number": 1,
+      "requested_room_id": 5,
+      "requested_bed_number": 1,
+      "reason": "Want to move to a deluxe room on a higher floor for better view and less noise.",
+      "status": "pending",
+      "requested_at": "2024-01-18T10:30:00.000Z",
+      "processed_at": null,
+      "processed_by": null,
+      "comments": null
+    },
+    {
+      "id": 2,
+      "student_id": 3,
+      "current_room_id": 1,
+      "current_bed_number": 2,
+      "requested_room_id": 2,
+      "requested_bed_number": 3,
+      "reason": "Current roommates have different study schedules, need quieter environment.",
+      "status": "approved",
+      "requested_at": "2024-01-17T14:15:00.000Z",
+      "processed_at": "2024-01-17T16:00:00.000Z",
+      "processed_by": 1,
+      "comments": "Approved. Room change effective immediately."
+    },
+    {
+      "id": 3,
+      "student_id": 6,
+      "current_room_id": 2,
+      "current_bed_number": 2,
+      "requested_room_id": 3,
+      "requested_bed_number": 1,
+      "reason": "Medical reasons - need room with better ventilation.",
+      "status": "rejected",
+      "requested_at": "2024-01-16T09:45:00.000Z",
+      "processed_at": "2024-01-16T11:30:00.000Z",
+      "processed_by": 1,
+      "comments": "Medical certificate required for medical reasons. Please resubmit with proper documentation."
+    }
+  ],
+  "personal_details_requests": [
+    {
+      "id": 1,
+      "student_id": 6,
+      "phone": "9876543221",
+      "address_line1": "987 New Street",
+      "address_line2": "Block C",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "postal_code": "600001",
+      "guardian_name": "David Chen",
+      "guardian_phone": "9876543222",
+      "guardian_address": "987 New Street, Block C, Chennai, Tamil Nadu 600001",
+      "status": "pending",
+      "requested_at": "2024-01-18T11:00:00.000Z",
+      "processed_at": null,
+      "processed_by": null,
+      "comments": null
+    },
+    {
+      "id": 2,
+      "student_id": 7,
+      "phone": "9876543225",
+      "address_line1": "654 Valley View",
+      "address_line2": "",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "postal_code": "500001",
+      "guardian_name": "Carlos Garcia",
+      "guardian_phone": "9876543226",
+      "guardian_address": "654 Valley View, Hyderabad, Telangana 500001",
+      "status": "approved",
+      "requested_at": "2024-01-17T13:20:00.000Z",
+      "processed_at": "2024-01-17T15:45:00.000Z",
+      "processed_by": 1,
+      "comments": "Details updated successfully."
+    },
+    {
+      "id": 3,
+      "student_id": 4,
+      "phone": "9876543227",
+      "address_line1": "789 Garden Road",
+      "address_line2": "Flat 4A",
+      "city": "Bangalore",
+      "state": "Karnataka",
+      "postal_code": "560001",
+      "guardian_name": "Suresh Kumar",
+      "guardian_phone": "9876543228",
+      "guardian_address": "789 Garden Road, Flat 4A, Bangalore, Karnataka 560001",
+      "status": "rejected",
+      "requested_at": "2024-01-16T16:30:00.000Z",
+      "processed_at": "2024-01-16T18:00:00.000Z",
+      "processed_by": 1,
+      "comments": "Guardian phone number verification failed. Please provide correct contact information."
+    }
+  ]
+}
