@@ -19,17 +19,32 @@ public class DataInitializationService {
     
     private final FoodMenuRepository foodMenuRepository;
     
+    private final JsonDataLoaderService jsonDataLoaderService;
+    
     private final PasswordEncoder passwordEncoder;
 
-    public DataInitializationService(UserRepository userRepository, RoomRepository roomRepository, BedRepository bedRepository, FoodMenuRepository foodMenuRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializationService(UserRepository userRepository, RoomRepository roomRepository, BedRepository bedRepository, FoodMenuRepository foodMenuRepository, JsonDataLoaderService jsonDataLoaderService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roomRepository = roomRepository;
         this.bedRepository = bedRepository;
         this.foodMenuRepository = foodMenuRepository;
+        this.jsonDataLoaderService = jsonDataLoaderService;
         this.passwordEncoder = passwordEncoder;
     }
 
     public void initializeData() {
+        // Try to load from JSON first
+        if (userRepository.count() == 0 && roomRepository.count() == 0) {
+            System.out.println("🔄 No existing data found. Attempting to load from database.json...");
+            try {
+                jsonDataLoaderService.loadDataFromJson();
+                return; // If JSON loading succeeds, we're done
+            } catch (Exception e) {
+                System.out.println("⚠️ JSON loading failed, falling back to default data initialization: " + e.getMessage());
+            }
+        }
+        
+        // Fallback to original initialization logic
         // Create default warden if not exists
         if (userRepository.findByUsername("warden").isEmpty()) {
             createDefaultWarden();
@@ -46,6 +61,11 @@ public class DataInitializationService {
         // Create sample food menu if none exists
         if (foodMenuRepository.count() == 0) {
             createFoodMenu();
+        }
+        
+        // Display statistics for fallback data
+        if (userRepository.count() > 0) {
+            displayFallbackStatistics();
         }
     }
 
@@ -140,5 +160,21 @@ public class DataInitializationService {
         
         foodMenuRepository.saveAll(menuItems);
         System.out.println("Food menu created");
+    }
+    
+    private void displayFallbackStatistics() {
+        long userCount = userRepository.count();
+        long roomCount = roomRepository.count();
+        long bedCount = bedRepository.count();
+        long foodMenuCount = foodMenuRepository.count();
+
+        System.out.println("✅ Fallback data initialization completed!");
+        System.out.println("📊 Database statistics:");
+        System.out.println("   - Users: " + userCount);
+        System.out.println("   - Rooms: " + roomCount);
+        System.out.println("   - Beds: " + bedCount);
+        System.out.println("   - Food Menu Items: " + foodMenuCount);
+        System.out.println("\n🔐 Default Login Credentials:");
+        System.out.println("   Warden - Username: warden, Password: warden123");
     }
 } 

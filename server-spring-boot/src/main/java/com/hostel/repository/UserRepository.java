@@ -27,4 +27,7 @@ public interface UserRepository extends MongoRepository<User, String> {
     boolean existsByRollNo(String rollNo);
     
     boolean existsByPhone(String phone);
+    
+    // Count methods for statistics
+    long countByRole(String role);
 } 

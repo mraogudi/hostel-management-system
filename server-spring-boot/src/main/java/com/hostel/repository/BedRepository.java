@@ -18,4 +18,7 @@ public interface BedRepository extends MongoRepository<Bed, String> {
     Optional<Bed> findByRoomIdAndBedNumber(String roomId, Integer bedNumber);
     
     long countByRoomIdAndStatus(String roomId, String status);
+    
+    // Count methods for statistics
+    long countByStatus(String status);
 } 
