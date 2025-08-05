@@ -4,6 +4,14 @@ import com.hostel.dto.LoginRequest;
 import com.hostel.dto.LoginResponse;
 import com.hostel.dto.UserDto;
 import com.hostel.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
+@Tag(name = "Authentication", description = "Endpoints for user authentication and profile management")
 public class AuthController {
     
     private final AuthService authService;
@@ -23,6 +32,18 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(
+        summary = "User Login", 
+        description = "Authenticate user with username and password. Returns JWT token for authorized access."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Login successful", 
+            content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Invalid credentials",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Invalid username or password\"}"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Database error\"}")))
+    })
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             LoginResponse response = authService.authenticateUser(loginRequest);
@@ -38,6 +59,21 @@ public class AuthController {
     }
     
     @GetMapping("/profile")
+    @Operation(
+        summary = "Get User Profile", 
+        description = "Retrieve the current user's profile information"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Profile retrieved successfully", 
+            content = @Content(schema = @Schema(implementation = UserDto.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing token",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Unauthorized\"}"))),
+        @ApiResponse(responseCode = "404", description = "User not found",
+            content = @Content(schema = @Schema(example = "{\"error\": \"User not found\"}"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Database error\"}")))
+    })
     public ResponseEntity<?> getProfile(HttpServletRequest request) {
         try {
             String userIdStr = (String) request.getAttribute("userId");

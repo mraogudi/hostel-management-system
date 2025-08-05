@@ -103,17 +103,7 @@ public class DataInitializationService {
         logger.info("Creating sample rooms with beds...");
         
         // Create rooms - specifically ensuring R007 exists with 4 beds
-        Room room1 = new Room("R001", 1, 4, "Standard");
-        Room room2 = new Room("R002", 1, 4, "Standard");
-        Room room3 = new Room("R003", 1, 2, "Premium");
-        Room room4 = new Room("R004", 2, 4, "Standard");
-        Room room5 = new Room("R005", 2, 4, "Standard");
-        Room room6 = new Room("R006", 2, 2, "Premium");
-        Room room7 = new Room("R007", 2, 4, "Standard"); // This is the room from the screenshot
-        Room room8 = new Room("R008", 3, 4, "Standard");
-        
-        // Save rooms first
-        List<Room> rooms = Arrays.asList(room1, room2, room3, room4, room5, room6, room7, room8);
+        List<Room> rooms = getRooms();
         List<Room> savedRooms = roomRepository.saveAll(rooms);
         
         // Create beds for each room with proper status
@@ -130,7 +120,21 @@ public class DataInitializationService {
         
         logger.info("Sample rooms and beds created successfully!");
     }
-    
+
+    private static List<Room> getRooms() {
+        Room room1 = new Room("R001", 1, 4, "Standard");
+        Room room2 = new Room("R002", 1, 4, "Standard");
+        Room room3 = new Room("R003", 1, 2, "Premium");
+        Room room4 = new Room("R004", 2, 4, "Standard");
+        Room room5 = new Room("R005", 2, 4, "Standard");
+        Room room6 = new Room("R006", 2, 2, "Premium");
+        Room room7 = new Room("R007", 2, 4, "Standard"); // This is the room from the screenshot
+        Room room8 = new Room("R008", 3, 4, "Standard");
+
+        // Save rooms first
+        return Arrays.asList(room1, room2, room3, room4, room5, room6, room7, room8);
+    }
+
     private void createFoodMenu() {
         List<FoodMenu> menuItems = Arrays.asList(
             new FoodMenu("breakfast", "Monday", "Bread, Butter, Jam, Tea/Coffee, Boiled Eggs"),

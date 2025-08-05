@@ -1,6 +1,14 @@
 package com.hostel.controller;
 
 import com.hostel.service.RoomService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
+@Tag(name = "Room Management", description = "Endpoints for room information and availability management")
 public class RoomController {
     
     private final RoomService roomService;
@@ -19,6 +28,16 @@ public class RoomController {
     }
     
     @GetMapping("/rooms")
+    @Operation(
+        summary = "Get All Rooms", 
+        description = "Retrieve all rooms with their occupancy statistics and availability status"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Rooms retrieved successfully",
+            content = @Content(schema = @Schema(example = "[{\"roomNumber\": \"R001\", \"capacity\": 4, \"occupied\": 2, \"available\": 2}]"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Database error\"}")))
+    })
     public ResponseEntity<?> getAllRooms() {
         try {
             List<Map<String, Object>> roomsWithStats = roomService.getAllRoomsWithStats();

@@ -9,6 +9,14 @@ import com.hostel.service.StudentService;
 import com.hostel.repository.UserRepository;
 import com.hostel.repository.RoomRepository;
 import com.hostel.model.Room;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +29,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/warden")
 @CrossOrigin(origins = "*")
+@Tag(name = "Warden Management", description = "Endpoints for warden operations - student management, room assignments, and request approvals")
+@SecurityRequirement(name = "Bearer Authentication")
 public class WardenController {
 
     private final StudentService studentService;
@@ -36,6 +46,20 @@ public class WardenController {
     }
 
     @PostMapping("/create-student")
+    @Operation(
+        summary = "Create New Student", 
+        description = "Create a new student account with personal details and room assignment"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Student created successfully",
+            content = @Content(schema = @Schema(example = "{\"message\": \"Student created successfully\", \"studentId\": \"123\"}"))),
+        @ApiResponse(responseCode = "400", description = "Invalid request data",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Username already exists\"}"))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Warden access required",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Unauthorized\"}"))),
+        @ApiResponse(responseCode = "500", description = "Internal server error",
+            content = @Content(schema = @Schema(example = "{\"error\": \"Database error\"}")))
+    })
     public ResponseEntity<?> createStudent(@Valid @RequestBody CreateStudentRequest request) {
         try {
             Map<String, Object> response = studentService.createStudent(request);
