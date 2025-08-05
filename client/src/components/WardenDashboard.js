@@ -1173,6 +1173,15 @@ const WardenDashboard = () => {
                 </div>
                 
                 <div className="stat-card secondary">
+                  <div className="stat-icon">🏠</div>
+                  <div className="stat-content">
+                    <h3>Room Change Requests</h3>
+                    <div className="stat-number">{roomChangeRequests.length}</div>
+                    <div className="stat-description">Room transfer requests</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card secondary">
                   <div className="stat-icon">🎯</div>
                   <div className="stat-content">
                     <h3>Occupancy Rate</h3>
