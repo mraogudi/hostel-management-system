@@ -54,7 +54,7 @@ function initializeDatabase() {
     role: 'warden',
     full_name: 'Hostel Warden',
     email: 'warden@hostel.edu',
-    phone: null,
+    phone: '9876543210',
     created_at: new Date().toISOString()
   });
 

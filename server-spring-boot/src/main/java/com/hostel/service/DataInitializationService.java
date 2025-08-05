@@ -33,6 +33,9 @@ public class DataInitializationService {
         // Create default warden if not exists
         if (userRepository.findByUsername("warden").isEmpty()) {
             createDefaultWarden();
+        } else {
+            // Update existing warden phone if null
+            updateWardenPhone();
         }
 
         // Create sample rooms if none exist
@@ -55,11 +58,21 @@ public class DataInitializationService {
             "warden",
             "Hostel Warden",
             "warden@hostel.edu",
-            null
+            "9876543210"
         );
         
         userRepository.save(warden);
         System.out.println("Default warden account created");
+    }
+    
+    private void updateWardenPhone() {
+        userRepository.findByUsername("warden").ifPresent(warden -> {
+            if (warden.getPhone() == null || warden.getPhone().trim().isEmpty()) {
+                warden.setPhone("9876543210");
+                userRepository.save(warden);
+                System.out.println("Updated warden phone number");
+            }
+        });
     }
     
     private void createSampleRoomsWithBeds() {

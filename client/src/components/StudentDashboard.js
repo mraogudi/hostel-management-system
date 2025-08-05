@@ -898,7 +898,6 @@ const StudentDashboard = () => {
                       className="contact-warden-btn" 
                       onClick={() => {
                         console.log('Button clicked - direct onclick');
-                        alert('Button clicked! Check console for details.');
                         handleContactWarden();
                       }}
                     >
@@ -1183,7 +1182,6 @@ const StudentDashboard = () => {
                   <div className="contact-details">
                     <label>Email</label>
                     <span>{wardenContact.email}</span>
-                    <a href={`mailto:${wardenContact.email}`} className="contact-action">Send Email</a>
                   </div>
                 </div>
                 
@@ -1193,7 +1191,6 @@ const StudentDashboard = () => {
                     <div className="contact-details">
                       <label>Phone</label>
                       <span>{wardenContact.phone}</span>
-                      <a href={`tel:${wardenContact.phone}`} className="contact-action">Call Now</a>
                     </div>
                   </div>
                 )}
