@@ -324,6 +324,6 @@ components:
   securitySchemes:
     Bearer Authentication:
       type: http
-      description: Enter JWT Bearer token in the format: Bearer {token}
+      description: Enter JWT Bearer token in the format - Bearer {token}
       scheme: bearer
       bearerFormat: JWT 
