@@ -3,6 +3,7 @@ package com.hostel.controller;
 import com.hostel.dto.CreateStudentRequest;
 import com.hostel.dto.AssignRoomRequest;
 import com.hostel.model.RoomChangeRequest;
+import com.hostel.model.PersonalDetailsUpdateRequest;
 import com.hostel.model.User;
 import com.hostel.service.StudentService;
 import com.hostel.repository.UserRepository;
@@ -187,6 +188,78 @@ public class WardenController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                 .body(Map.of("error", "Failed to reject room change request"));
+        }
+    }
+
+    @GetMapping("/personal-details-update-requests")
+    public ResponseEntity<?> getPersonalDetailsUpdateRequests() {
+        try {
+            List<PersonalDetailsUpdateRequest> requests = studentService.getAllPersonalDetailsUpdateRequests();
+            
+            List<Map<String, Object>> requestsWithDetails = requests.stream().map(request -> {
+                Map<String, Object> requestMap = new HashMap<>();
+                requestMap.put("id", request.getId());
+                requestMap.put("student_id", request.getStudentId());
+                requestMap.put("student_name", request.getStudentName());
+                requestMap.put("roll_no", request.getStudentRollNo());
+                requestMap.put("phone", request.getPhone());
+                requestMap.put("address_line1", request.getAddressLine1());
+                requestMap.put("address_line2", request.getAddressLine2());
+                requestMap.put("city", request.getCity());
+                requestMap.put("state", request.getState());
+                requestMap.put("postal_code", request.getPostalCode());
+                requestMap.put("guardian_name", request.getGuardianName());
+                requestMap.put("guardian_phone", request.getGuardianPhone());
+                requestMap.put("guardian_address", request.getGuardianAddress());
+                requestMap.put("status", request.getStatus());
+                requestMap.put("requested_at", request.getCreatedAt());
+                requestMap.put("processed_at", request.getProcessedAt());
+                requestMap.put("processed_by", request.getProcessedBy());
+                requestMap.put("warden_comments", request.getWardenComments());
+                return requestMap;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(requestsWithDetails);
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to fetch personal details update requests"));
+        }
+    }
+
+    @PutMapping("/personal-details-update-requests/{requestId}/approve")
+    public ResponseEntity<?> approvePersonalDetailsUpdateRequest(
+            @PathVariable Long requestId, 
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            String wardenComments = requestBody.get("comments");
+            studentService.approvePersonalDetailsUpdateRequest(requestId, wardenComments);
+            return ResponseEntity.ok(Map.of("message", "Personal details update request approved successfully"));
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to approve personal details update request"));
+        }
+    }
+
+    @PutMapping("/personal-details-update-requests/{requestId}/reject")
+    public ResponseEntity<?> rejectPersonalDetailsUpdateRequest(
+            @PathVariable Long requestId, 
+            @RequestBody Map<String, String> requestBody) {
+        try {
+            String wardenComments = requestBody.get("comments");
+            studentService.rejectPersonalDetailsUpdateRequest(requestId, wardenComments);
+            return ResponseEntity.ok(Map.of("message", "Personal details update request rejected successfully"));
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to reject personal details update request"));
         }
     }
 } 

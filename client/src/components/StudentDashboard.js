@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import './StudentDashboard.css';
 
 const StudentDashboard = () => {
-  const { user, logout, apiCall } = useAuth();
+  const { user, logout, apiCall, fetchProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('room');
   const [roomInfo, setRoomInfo] = useState(null);
   const [foodMenu, setFoodMenu] = useState([]);
@@ -22,10 +22,46 @@ const StudentDashboard = () => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [showWardenContact, setShowWardenContact] = useState(false);
   const [wardenContact, setWardenContact] = useState(null);
+  
+  // Personal details update state
+  const [personalDetails, setPersonalDetails] = useState({
+    phone: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    guardian_name: '',
+    guardian_phone: '',
+    guardian_address: ''
+  });
+  const [updatingDetails, setUpdatingDetails] = useState(false);
 
-  useEffect(() => {
+
+    useEffect(() => {
     fetchData();
   }, []);
+
+
+
+  // Initialize personal details from user data
+  useEffect(() => {
+    if (user) {
+      setPersonalDetails({
+        phone: user.phone || '',
+        address_line1: user.address_line1 || '',
+        address_line2: user.address_line2 || '',
+        city: user.city || '',
+        state: user.state || '',
+        postal_code: user.postal_code || '',
+        guardian_name: user.guardian_name || '',
+        guardian_phone: user.guardian_phone || '',
+        guardian_address: user.guardian_address || ''
+      });
+    }
+  }, [user]);
+
+  
 
 
 
@@ -297,6 +333,41 @@ const StudentDashboard = () => {
       console.log('No warden contact, fetching from API');
       fetchWardenContact();
     }
+  };
+
+  // Handle personal details input change
+  const handlePersonalDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setPersonalDetails(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle personal details form submission
+  const handlePersonalDetailsSubmit = async (e) => {
+    e.preventDefault();
+    setUpdatingDetails(true);
+    
+    console.log('Submitting personal details update request:', personalDetails);
+    
+    try {
+      const result = await apiCall('POST', '/api/student/personal-details-update-request', personalDetails);
+      
+      if (result.success) {
+        setMessage('Personal details update request submitted successfully! Please wait for warden approval.');
+        setTimeout(() => setMessage(''), 5000);
+      } else {
+        setMessage(`Error: ${result.error}`);
+        setTimeout(() => setMessage(''), 5000);
+      }
+    } catch (error) {
+      console.error('Error submitting personal details update:', error);
+      setMessage('Error submitting update request. Please try again.');
+      setTimeout(() => setMessage(''), 5000);
+    }
+    
+    setUpdatingDetails(false);
   };
 
   // Visual Components
@@ -722,6 +793,12 @@ const StudentDashboard = () => {
             My Room
           </button>
           <button 
+            className={`nav-button ${activeTab === 'personal' ? 'active' : ''}`}
+            onClick={() => setActiveTab('personal')}
+          >
+            Personal Details
+          </button>
+          <button 
             className={`nav-button ${activeTab === 'menu' ? 'active' : ''}`}
             onClick={() => setActiveTab('menu')}
           >
@@ -905,6 +982,243 @@ const StudentDashboard = () => {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'personal' && (
+            <div className="personal-details-section">
+              <h2>Personal Details</h2>
+              
+              <div className="contact-note-top">
+                <p><strong>Note:</strong> For urgent updates, please contact the warden directly. All personal detail changes require verification and approval.</p>
+              </div>
+              
+              <div className="personal-details-container">
+                <form className="personal-details-form" onSubmit={handlePersonalDetailsSubmit}>
+                  {/* Personal Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">👤</span>
+                      Personal Information
+                    </h3>
+                    
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Full Name</label>
+                        <div className="form-value">{user.full_name || 'Not provided'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Email</label>
+                        <div className="form-value">{user.email || 'Not provided'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="phone">Phone Number</label>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          value={personalDetails.phone}
+                          onChange={handlePersonalDetailsChange}
+                          placeholder="Enter 10-digit phone number"
+                          maxLength="10"
+                          pattern="[6-9][0-9]{9}"
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Date of Birth</label>
+                        <div className="form-value">
+                          {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'Not provided'}
+                        </div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Gender</label>
+                        <div className="form-value">{user.gender || 'Not provided'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Aadhaar ID</label>
+                        <div className="form-value">{user.aadhaar_id || 'Not provided'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Academic Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">🎓</span>
+                      Academic Information
+                    </h3>
+                    
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Roll Number</label>
+                        <div className="form-value">{user.roll_no || 'Not assigned'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Stream</label>
+                        <div className="form-value">{user.stream || 'Not specified'}</div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Branch</label>
+                        <div className="form-value">{user.branch || 'Not specified'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">🏠</span>
+                      Address Information
+                    </h3>
+                    
+                    <div className="address-grid">
+                      <div className="address-row">
+                        <div className="form-group">
+                          <label htmlFor="address_line1">Address Line 1</label>
+                          <input
+                            type="text"
+                            id="address_line1"
+                            name="address_line1"
+                            value={personalDetails.address_line1}
+                            onChange={handlePersonalDetailsChange}
+                            placeholder="Street address, apartment, etc."
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label htmlFor="address_line2">Address Line 2</label>
+                          <input
+                            type="text"
+                            id="address_line2"
+                            name="address_line2"
+                            value={personalDetails.address_line2}
+                            onChange={handlePersonalDetailsChange}
+                            placeholder="Additional address information (optional)"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="location-row">
+                        <div className="form-group">
+                          <label htmlFor="city">City</label>
+                          <input
+                            type="text"
+                            id="city"
+                            name="city"
+                            value={personalDetails.city}
+                            onChange={handlePersonalDetailsChange}
+                            placeholder="Enter city"
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label htmlFor="state">State</label>
+                          <input
+                            type="text"
+                            id="state"
+                            name="state"
+                            value={personalDetails.state}
+                            onChange={handlePersonalDetailsChange}
+                            placeholder="Enter state"
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label htmlFor="postal_code">Postal Code</label>
+                          <input
+                            type="text"
+                            id="postal_code"
+                            name="postal_code"
+                            value={personalDetails.postal_code}
+                            onChange={handlePersonalDetailsChange}
+                            placeholder="Enter 6-digit postal code"
+                            maxLength="6"
+                            pattern="[0-9]{6}"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Guardian Information Section */}
+                  <div className="form-section">
+                    <h3 className="section-title">
+                      <span className="section-icon">👨‍👩‍👧‍👦</span>
+                      Guardian Information
+                    </h3>
+                    
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label htmlFor="guardian_name">Guardian Name</label>
+                        <input
+                          type="text"
+                          id="guardian_name"
+                          name="guardian_name"
+                          value={personalDetails.guardian_name}
+                          onChange={handlePersonalDetailsChange}
+                          placeholder="Enter guardian's name"
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="guardian_phone">Guardian Phone</label>
+                        <input
+                          type="tel"
+                          id="guardian_phone"
+                          name="guardian_phone"
+                          value={personalDetails.guardian_phone}
+                          onChange={handlePersonalDetailsChange}
+                          placeholder="Enter 10-digit guardian's phone"
+                          maxLength="10"
+                          pattern="[6-9][0-9]{9}"
+                        />
+                      </div>
+                      
+                      <div className="form-group full-width">
+                        <label htmlFor="guardian_address">Guardian Address</label>
+                        <textarea
+                          id="guardian_address"
+                          name="guardian_address"
+                          value={personalDetails.guardian_address}
+                          onChange={handlePersonalDetailsChange}
+                          placeholder="Enter guardian's address"
+                          rows="3"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="form-actions-section">
+                    <div className="form-actions">
+                      <button 
+                        type="submit" 
+                        className="submit-btn"
+                        disabled={updatingDetails}
+                      >
+                        {updatingDetails ? (
+                          <>
+                            <span className="loading-spinner">⏳</span>
+                            Submitting Request...
+                          </>
+                        ) : (
+                          <>
+                            <span className="btn-icon">💾</span>
+                            Submit Update Request
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
             </div>
           )}

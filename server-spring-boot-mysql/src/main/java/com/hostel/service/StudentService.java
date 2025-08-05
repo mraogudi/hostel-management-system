@@ -6,10 +6,12 @@ import com.hostel.model.User;
 import com.hostel.model.Bed;
 import com.hostel.model.Room;
 import com.hostel.model.RoomChangeRequest;
+import com.hostel.model.PersonalDetailsUpdateRequest;
 import com.hostel.repository.UserRepository;
 import com.hostel.repository.BedRepository;
 import com.hostel.repository.RoomRepository;
 import com.hostel.repository.RoomChangeRequestRepository;
+import com.hostel.repository.PersonalDetailsUpdateRequestRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -32,16 +34,19 @@ public class StudentService {
     
     private final RoomChangeRequestRepository roomChangeRequestRepository;
     
+    private final PersonalDetailsUpdateRequestRepository personalDetailsUpdateRequestRepository;
+    
     private final PasswordEncoder passwordEncoder;
     
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom random = new SecureRandom();
 
-    public StudentService(UserRepository userRepository, BedRepository bedRepository, RoomRepository roomRepository, RoomChangeRequestRepository roomChangeRequestRepository, PasswordEncoder passwordEncoder) {
+    public StudentService(UserRepository userRepository, BedRepository bedRepository, RoomRepository roomRepository, RoomChangeRequestRepository roomChangeRequestRepository, PersonalDetailsUpdateRequestRepository personalDetailsUpdateRequestRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.bedRepository = bedRepository;
         this.roomRepository = roomRepository;
         this.roomChangeRequestRepository = roomChangeRequestRepository;
+        this.personalDetailsUpdateRequestRepository = personalDetailsUpdateRequestRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -507,5 +512,185 @@ public class StudentService {
             sb.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
         }
         return sb.toString();
+    }
+    
+    public Map<String, Object> getWardenContact() {
+        System.out.println("=== getWardenContact ===");
+        
+        // Find the warden user
+        Optional<User> wardenOptional = userRepository.findByRole("warden").stream().findFirst();
+        
+        if (wardenOptional.isEmpty()) {
+            throw new RuntimeException("Warden contact information not available");
+        }
+        
+        User warden = wardenOptional.get();
+        System.out.println("Found warden: " + warden.getFullName());
+        
+        Map<String, Object> wardenContact = new HashMap<>();
+        wardenContact.put("name", warden.getFullName());
+        wardenContact.put("email", warden.getEmail());
+        wardenContact.put("phone", warden.getPhone());
+        wardenContact.put("office_hours", "9:00 AM - 5:00 PM (Monday to Friday)");
+        wardenContact.put("emergency_contact", "Available 24/7 for emergencies");
+        
+        System.out.println("Returning warden contact information");
+        return wardenContact;
+    }
+    
+    public Map<String, Object> submitPersonalDetailsUpdateRequest(Long userId, Map<String, String> updateRequest) {
+        System.out.println("=== submitPersonalDetailsUpdateRequest ===");
+        
+        // Get student user
+        Optional<User> studentOptional = userRepository.findById(userId);
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found");
+        }
+        
+        User student = studentOptional.get();
+        System.out.println("Student found: " + student.getFullName());
+        
+        // Check if there's already a pending request for this student
+        Optional<PersonalDetailsUpdateRequest> existingRequest = 
+            personalDetailsUpdateRequestRepository.findByStudentIdAndStatus(userId, "pending");
+        
+        if (existingRequest.isPresent()) {
+            throw new RuntimeException("You already have a pending personal details update request. Please wait for approval or contact the warden.");
+        }
+        
+        // Create new personal details update request
+        PersonalDetailsUpdateRequest request = new PersonalDetailsUpdateRequest(
+            userId, 
+            student.getFullName(),
+            student.getRollNo()
+        );
+        
+        // Set the updated fields
+        request.setPhone(updateRequest.get("phone"));
+        request.setAddressLine1(updateRequest.get("address_line1"));
+        request.setAddressLine2(updateRequest.get("address_line2"));
+        request.setCity(updateRequest.get("city"));
+        request.setState(updateRequest.get("state"));
+        request.setPostalCode(updateRequest.get("postal_code"));
+        request.setGuardianName(updateRequest.get("guardian_name"));
+        request.setGuardianPhone(updateRequest.get("guardian_phone"));
+        request.setGuardianAddress(updateRequest.get("guardian_address"));
+        
+        // Save the request
+        PersonalDetailsUpdateRequest savedRequest = personalDetailsUpdateRequestRepository.save(request);
+        
+        System.out.println("Personal details update request created with ID: " + savedRequest.getId());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Personal details update request submitted successfully");
+        response.put("request_id", savedRequest.getId());
+        response.put("status", "pending");
+        
+        return response;
+    }
+
+    public List<PersonalDetailsUpdateRequest> getAllPersonalDetailsUpdateRequests() {
+        System.out.println("=== getAllPersonalDetailsUpdateRequests ===");
+        
+        List<PersonalDetailsUpdateRequest> requests = personalDetailsUpdateRequestRepository.findAll();
+        System.out.println("Found " + requests.size() + " personal details update requests");
+        
+        return requests;
+    }
+
+    public void approvePersonalDetailsUpdateRequest(Long requestId, String wardenComments) {
+        System.out.println("=== approvePersonalDetailsUpdateRequest ===");
+        System.out.println("Request ID: " + requestId);
+        System.out.println("Warden Comments: " + wardenComments);
+
+        // Find the request
+        Optional<PersonalDetailsUpdateRequest> requestOptional = personalDetailsUpdateRequestRepository.findById(requestId);
+        if (requestOptional.isEmpty()) {
+            throw new RuntimeException("Personal details update request not found");
+        }
+
+        PersonalDetailsUpdateRequest request = requestOptional.get();
+        
+        if (!"pending".equals(request.getStatus())) {
+            throw new RuntimeException("Request has already been processed");
+        }
+
+        // Find the student
+        Optional<User> studentOptional = userRepository.findById(request.getStudentId());
+        if (studentOptional.isEmpty()) {
+            throw new RuntimeException("Student not found");
+        }
+
+        User student = studentOptional.get();
+        System.out.println("Found student: " + student.getFullName());
+
+        // Update student's personal details
+        if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            student.setPhone(request.getPhone());
+        }
+        if (request.getAddressLine1() != null && !request.getAddressLine1().trim().isEmpty()) {
+            student.setAddressLine1(request.getAddressLine1());
+        }
+        if (request.getAddressLine2() != null) {
+            student.setAddressLine2(request.getAddressLine2());
+        }
+        if (request.getCity() != null && !request.getCity().trim().isEmpty()) {
+            student.setCity(request.getCity());
+        }
+        if (request.getState() != null && !request.getState().trim().isEmpty()) {
+            student.setState(request.getState());
+        }
+        if (request.getPostalCode() != null && !request.getPostalCode().trim().isEmpty()) {
+            student.setPostalCode(request.getPostalCode());
+        }
+        if (request.getGuardianName() != null && !request.getGuardianName().trim().isEmpty()) {
+            student.setGuardianName(request.getGuardianName());
+        }
+        if (request.getGuardianPhone() != null && !request.getGuardianPhone().trim().isEmpty()) {
+            student.setGuardianPhone(request.getGuardianPhone());
+        }
+        if (request.getGuardianAddress() != null && !request.getGuardianAddress().trim().isEmpty()) {
+            student.setGuardianAddress(request.getGuardianAddress());
+        }
+
+        // Save updated student
+        userRepository.save(student);
+        System.out.println("Student details updated successfully");
+
+        // Update request status
+        request.setStatus("approved");
+        request.setProcessedAt(LocalDateTime.now());
+        request.setProcessedBy("warden"); // You might want to get actual warden ID
+        request.setWardenComments(wardenComments);
+
+        personalDetailsUpdateRequestRepository.save(request);
+        System.out.println("Personal details update request approved and processed");
+    }
+
+    public void rejectPersonalDetailsUpdateRequest(Long requestId, String wardenComments) {
+        System.out.println("=== rejectPersonalDetailsUpdateRequest ===");
+        System.out.println("Request ID: " + requestId);
+        System.out.println("Warden Comments: " + wardenComments);
+
+        // Find the request
+        Optional<PersonalDetailsUpdateRequest> requestOptional = personalDetailsUpdateRequestRepository.findById(requestId);
+        if (requestOptional.isEmpty()) {
+            throw new RuntimeException("Personal details update request not found");
+        }
+
+        PersonalDetailsUpdateRequest request = requestOptional.get();
+        
+        if (!"pending".equals(request.getStatus())) {
+            throw new RuntimeException("Request has already been processed");
+        }
+
+        // Update request status
+        request.setStatus("rejected");
+        request.setProcessedAt(LocalDateTime.now());
+        request.setProcessedBy("warden"); // You might want to get actual warden ID
+        request.setWardenComments(wardenComments);
+
+        personalDetailsUpdateRequestRepository.save(request);
+        System.out.println("Personal details update request rejected");
     }
 } 

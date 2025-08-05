@@ -97,6 +97,18 @@ public class AuthService {
             userDto.setRollNo(user.getRollNo());
             userDto.setStream(user.getStream());
             userDto.setBranch(user.getBranch());
+            
+            // Include address fields
+            userDto.setAddressLine1(user.getAddressLine1());
+            userDto.setAddressLine2(user.getAddressLine2());
+            userDto.setCity(user.getCity());
+            userDto.setState(user.getState());
+            userDto.setPostalCode(user.getPostalCode());
+            
+            // Include guardian fields
+            userDto.setGuardianName(user.getGuardianName());
+            userDto.setGuardianAddress(user.getGuardianAddress());
+            userDto.setGuardianPhone(user.getGuardianPhone());
         }
         
         return userDto;

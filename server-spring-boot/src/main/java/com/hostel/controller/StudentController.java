@@ -87,4 +87,28 @@ public class StudentController {
                 .body(Map.of("error", "Failed to get warden contact information"));
         }
     }
+    
+    @PostMapping("/personal-details-update-request")
+    public ResponseEntity<?> submitPersonalDetailsUpdateRequest(
+            @RequestBody Map<String, String> updateRequest, 
+            HttpServletRequest request) {
+        try {
+            String userId = (String) request.getAttribute("userId");
+            
+            if (userId == null) {
+                return ResponseEntity.status(401)
+                    .body(Map.of("error", "Unauthorized"));
+            }
+            
+            Map<String, Object> response = studentService.submitPersonalDetailsUpdateRequest(userId, updateRequest);
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                .body(Map.of("error", "Failed to submit personal details update request"));
+        }
+    }
 } 

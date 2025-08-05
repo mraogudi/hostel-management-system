@@ -2895,12 +2895,351 @@
   border-color: #f5c6cb;
 }
 
+/* Personal Details Section */
+.personal-details-section {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.personal-details-section h2 {
+  margin: 0 0 24px 0;
+  color: #2c3e50;
+  font-size: 1.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.personal-details-section h2::before {
+  content: "👤";
+  font-size: 1.5rem;
+}
+
+.contact-note-top {
+  background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border-left: 4px solid #007bff;
+}
+
+.contact-note-top p {
+  margin: 0;
+  color: #1565c0;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.personal-details-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.personal-details-form {
+  padding: 0;
+}
+
+.personal-details-form form {
+  width: 100%;
+}
+
+/* Form Sections */
+.form-section {
+  padding: 32px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px 0;
+  color: #2c3e50;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.section-icon {
+  font-size: 1.5rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Address Grid Layout */
+.address-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.address-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.location-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Form Values (Read-only display) */
+.form-value {
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 500;
+  min-height: 20px;
+  line-height: 1.4;
+}
+
+.form-value:empty::before {
+  content: 'Not provided';
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Form Actions Section */
+.form-actions-section {
+  padding: 32px;
+  background: linear-gradient(135deg, #f8f9fa, #ffffff);
+  border-top: 3px solid #007bff;
+}
+
+.loading-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Form Actions */
+.form-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(0, 123, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+}
+
+.submit-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-icon {
+  font-size: 1rem;
+}
+
+.update-info {
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+}
+
+.update-info h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.contact-note {
+  background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+  border: 1px solid #bbdefb;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 4px solid #007bff;
+}
+
+.contact-note p {
+  margin: 0;
+  color: #1565c0;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  .personal-details-section {
+    padding: 16px;
+  }
+  
+  .form-section {
+    padding: 24px 20px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .address-row,
+  .location-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .section-title {
+    font-size: 1.2rem;
+  }
+  
+  .section-icon {
+    font-size: 1.3rem;
+  }
+  
+  .form-value {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .submit-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+  
+  .update-info {
+    padding: 20px;
+  }
+  
+  .info-cards {
+    grid-template-columns: 1fr;
+  }
+  
   .request-section {
     padding: 16px;
   }
+}
 
+@media (max-width: 480px) {
+  .form-section {
+    padding: 20px 16px;
+  }
+  
+  .section-title {
+    font-size: 1.1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .form-value {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .update-request-form .form-group input,
+  .update-request-form .form-group select,
+  .update-request-form .form-group textarea {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .submit-btn {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+  
   .room-filters {
     justify-content: center;
   }

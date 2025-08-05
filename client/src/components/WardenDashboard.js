@@ -9,6 +9,7 @@ const WardenDashboard = () => {
   const [rooms, setRooms] = useState([]);
   const [students, setStudents] = useState([]);
   const [roomChangeRequests, setRoomChangeRequests] = useState([]);
+  const [personalDetailsRequests, setPersonalDetailsRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   
@@ -57,6 +58,12 @@ const WardenDashboard = () => {
   const [studentsRefreshing, setStudentsRefreshing] = useState(false);
   const [roomsRefreshing, setRoomsRefreshing] = useState(false);
   const [requestsRefreshing, setRequestsRefreshing] = useState(false);
+
+  // Personal details requests modal state
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [actionType, setActionType] = useState('');
+  const [wardenComments, setWardenComments] = useState('');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -175,6 +182,15 @@ const WardenDashboard = () => {
       setRoomChangeRequests(requestsResult.data);
     } else {
       console.error('Failed to fetch room change requests:', requestsResult.error);
+    }
+
+    // Fetch personal details update requests
+    const personalDetailsResult = await apiCall('GET', '/api/warden/personal-details-update-requests');
+    console.log('Personal Details Requests API response:', personalDetailsResult);
+    if (personalDetailsResult.success) {
+      setPersonalDetailsRequests(personalDetailsResult.data);
+    } else {
+      console.error('Failed to fetch personal details update requests:', personalDetailsResult.error);
     }
 
     // Fetch all students for overview display and general use
@@ -303,6 +319,37 @@ const WardenDashboard = () => {
     setTimeout(() => setMessage(''), 5000);
   };
 
+  const handlePersonalDetailsAction = (request, action) => {
+    setSelectedRequest(request);
+    setActionType(action);
+    setWardenComments('');
+    setShowCommentsModal(true);
+  };
+
+  const submitPersonalDetailsAction = async () => {
+    try {
+      const result = await apiCall('PUT', `/api/warden/personal-details-update-requests/${selectedRequest.id}/${actionType}`, {
+        comments: wardenComments
+      });
+      
+      if (result.success) {
+        setMessage(`Personal details request ${actionType}d successfully!`);
+        setShowCommentsModal(false);
+        setSelectedRequest(null);
+        setActionType('');
+        setWardenComments('');
+        // Refresh data
+        await fetchData();
+      } else {
+        setMessage(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+    }
+    
+    setTimeout(() => setMessage(''), 5000);
+  };
+
   // Tab-specific refresh functions
   const refreshOverview = async () => {
     setOverviewRefreshing(true);
@@ -393,12 +440,23 @@ const WardenDashboard = () => {
     console.log('🔄 Refreshing requests data...');
     
     try {
+      // Fetch room change requests
       const requestsResult = await apiCall('GET', '/api/warden/room-change-requests');
       if (requestsResult.success) {
         setRoomChangeRequests(requestsResult.data);
-        console.log('✅ Requests data refreshed successfully');
+        console.log('✅ Room change requests refreshed successfully');
       } else {
-        setMessage('Error refreshing requests data');
+        setMessage('Error refreshing room change requests');
+        setTimeout(() => setMessage(''), 5000);
+      }
+
+      // Fetch personal details update requests
+      const personalDetailsResult = await apiCall('GET', '/api/warden/personal-details-update-requests');
+      if (personalDetailsResult.success) {
+        setPersonalDetailsRequests(personalDetailsResult.data);
+        console.log('✅ Personal details requests refreshed successfully');
+      } else {
+        setMessage('Error refreshing personal details requests');
         setTimeout(() => setMessage(''), 5000);
       }
     } catch (error) {
@@ -1056,7 +1114,10 @@ const WardenDashboard = () => {
                   <div className="stat-icon">⏳</div>
                   <div className="stat-content">
                     <h3>Pending Requests</h3>
-                    <div className="stat-number">{roomChangeRequests.filter(req => req.status === 'pending').length}</div>
+                    <div className="stat-number">
+                      {roomChangeRequests.filter(req => req.status === 'pending').length + 
+                       personalDetailsRequests.filter(req => req.status === 'pending').length}
+                    </div>
                     <div className="stat-description">Awaiting approval</div>
                   </div>
                 </div>
@@ -1097,8 +1158,17 @@ const WardenDashboard = () => {
                   <div className="stat-icon">📋</div>
                   <div className="stat-content">
                     <h3>Total Requests</h3>
-                    <div className="stat-number">{roomChangeRequests.length}</div>
+                    <div className="stat-number">{roomChangeRequests.length + personalDetailsRequests.length}</div>
                     <div className="stat-description">All time requests</div>
+                  </div>
+                </div>
+                
+                <div className="stat-card secondary">
+                  <div className="stat-icon">🆔</div>
+                  <div className="stat-content">
+                    <h3>Personal Details Requests</h3>
+                    <div className="stat-number">{personalDetailsRequests.length}</div>
+                    <div className="stat-description">Profile update requests</div>
                   </div>
                 </div>
                 
@@ -1142,29 +1212,54 @@ const WardenDashboard = () => {
               <div className={`recent-activity ${overviewRefreshing ? 'loading' : ''}`}>
                 <h3>📊 Recent Activity</h3>
                 <div className="activity-list">
-                  {roomChangeRequests.slice(0, 5).map(request => (
-                    <div key={request.id} className="activity-item">
-                      <div className="activity-icon">
-                        {request.status === 'pending' ? '⏳' : request.status === 'approved' ? '✅' : '❌'}
-                      </div>
-                      <div className="activity-content">
-                        <div className="activity-title">
-                          {request.student_name} requested room change
+                  {(() => {
+                    // Combine room change and personal details requests, then sort by date
+                    const allRequests = [
+                      ...roomChangeRequests.map(req => ({
+                        ...req,
+                        type: 'room_change',
+                        date: new Date(req.requested_at)
+                      })),
+                      ...personalDetailsRequests.map(req => ({
+                        ...req,
+                        type: 'personal_details',
+                        date: new Date(req.requested_at)
+                      }))
+                    ];
+                    
+                    return allRequests
+                      .sort((a, b) => b.date - a.date)
+                      .slice(0, 8)
+                      .map(request => (
+                        <div key={`${request.type}-${request.id}`} className="activity-item">
+                          <div className="activity-icon">
+                            {request.status === 'pending' ? '⏳' : request.status === 'approved' ? '✅' : '❌'}
+                          </div>
+                          <div className="activity-content">
+                            <div className="activity-title">
+                              {request.type === 'room_change' 
+                                ? `${request.student_name} requested room change`
+                                : `${request.student_name} requested personal details update`
+                              }
+                            </div>
+                            <div className="activity-description">
+                              {request.type === 'room_change' 
+                                ? `${request.current_room || 'No room'} → Room ${request.requested_room}`
+                                : `Phone, address, and guardian details`
+                              } • 
+                              <span className={`status-inline ${request.status}`}> {request.status}</span>
+                            </div>
+                            <div className="activity-time">
+                              {request.date.toLocaleDateString()}
+                            </div>
+                          </div>
                         </div>
-                        <div className="activity-description">
-                          {request.current_room || 'No room'} → Room {request.requested_room} • 
-                          <span className={`status-inline ${request.status}`}> {request.status}</span>
-                        </div>
-                        <div className="activity-time">
-                          {new Date(request.requested_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {roomChangeRequests.length === 0 && (
+                      ));
+                  })()}
+                  {(roomChangeRequests.length === 0 && personalDetailsRequests.length === 0) && (
                     <div className="no-activity">
                       <div className="no-activity-icon">📭</div>
-                      <div>No recent room change requests</div>
+                      <div>No recent requests</div>
                     </div>
                   )}
                 </div>
@@ -1386,7 +1481,7 @@ const WardenDashboard = () => {
             <div className="requests-section">
               {/* Tab Header with Refresh */}
               <div className="tab-header">
-                <h2>Room Change Requests</h2>
+                <h2>All Requests</h2>
                 <button 
                   className={`refresh-btn ${requestsRefreshing ? 'refreshing' : ''}`}
                   onClick={refreshRequests}
@@ -1453,6 +1548,90 @@ const WardenDashboard = () => {
                     <p>No room change requests found.</p>
                   </div>
                 )}
+              </div>
+
+              {/* Personal Details Update Requests Section */}
+              <div className="personal-details-requests-section">
+                <h3>Personal Details Update Requests</h3>
+                
+                <div className={`requests-table-container ${requestsRefreshing ? 'loading' : ''}`}>
+                  <table className="requests-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Roll No</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Guardian Info</th>
+                        <th>Date</th>
+                        <th>Status/Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {personalDetailsRequests.map(request => (
+                        <tr key={request.id}>
+                          <td>{request.student_name}</td>
+                          <td>{request.roll_no}</td>
+                          <td>{request.phone || 'Not updated'}</td>
+                          <td className="address-cell">
+                            {[
+                              request.address_line1,
+                              request.address_line2,
+                              request.city,
+                              request.state,
+                              request.postal_code
+                            ].filter(Boolean).join(', ') || 'Not updated'}
+                          </td>
+                          <td className="guardian-cell">
+                            {[
+                              request.guardian_name,
+                              request.guardian_phone,
+                              request.guardian_address
+                            ].filter(Boolean).join(', ') || 'Not updated'}
+                          </td>
+                          <td>{new Date(request.requested_at).toLocaleDateString()}</td>
+                          <td className="status-action-cell">
+                            {request.status === 'pending' ? (
+                              <div className="action-buttons">
+                                <button 
+                                  className="action-btn approve-btn"
+                                  onClick={() => handlePersonalDetailsAction(request, 'approve')}
+                                  title="Approve Request"
+                                >
+                                  ✅
+                                </button>
+                                <button 
+                                  className="action-btn reject-btn"
+                                  onClick={() => handlePersonalDetailsAction(request, 'reject')}
+                                  title="Reject Request"
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <span className={`status-badge ${request.status}`}>
+                                  {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                </span>
+                                {request.warden_comments && (
+                                  <div className="warden-comments" title={request.warden_comments}>
+                                    💬 Comments
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  
+                  {personalDetailsRequests.length === 0 && (
+                    <div className="no-requests">
+                      <p>No personal details update requests found.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1609,6 +1788,75 @@ const WardenDashboard = () => {
                 disabled={studentsLoading}
               >
                 {studentsLoading ? 'Deleting...' : 'Delete Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Modal for Personal Details Requests */}
+      {showCommentsModal && selectedRequest && (
+        <div className="modal-overlay">
+          <div className="modal-content comments-modal">
+            <h3>{actionType === 'approve' ? 'Approve' : 'Reject'} Personal Details Update</h3>
+            <div className="request-summary">
+              <p><strong>Student:</strong> {selectedRequest.student_name}</p>
+              <p><strong>Roll No:</strong> {selectedRequest.roll_no}</p>
+              <div className="details-grid">
+                {selectedRequest.phone && (
+                  <div className="detail-item">
+                    <strong>Phone:</strong> {selectedRequest.phone}
+                  </div>
+                )}
+                {(selectedRequest.address_line1 || selectedRequest.city) && (
+                  <div className="detail-item">
+                    <strong>Address:</strong> {[
+                      selectedRequest.address_line1,
+                      selectedRequest.address_line2,
+                      selectedRequest.city,
+                      selectedRequest.state,
+                      selectedRequest.postal_code
+                    ].filter(Boolean).join(', ')}
+                  </div>
+                )}
+                {selectedRequest.guardian_name && (
+                  <div className="detail-item">
+                    <strong>Guardian:</strong> {selectedRequest.guardian_name}
+                    {selectedRequest.guardian_phone && ` (${selectedRequest.guardian_phone})`}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="comment-section">
+              <label htmlFor="wardenComments">Warden Comments:</label>
+              <textarea
+                id="wardenComments"
+                value={wardenComments}
+                onChange={(e) => setWardenComments(e.target.value)}
+                placeholder={`Enter your comments for ${actionType === 'approve' ? 'approving' : 'rejecting'} this request...`}
+                rows="4"
+                className="comment-textarea"
+              />
+            </div>
+            
+            <div className="modal-actions">
+              <button 
+                className="cancel-button" 
+                onClick={() => {
+                  setShowCommentsModal(false);
+                  setSelectedRequest(null);
+                  setActionType('');
+                  setWardenComments('');
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`confirm-button ${actionType === 'approve' ? 'approve' : 'reject'}`}
+                onClick={submitPersonalDetailsAction}
+              >
+                {actionType === 'approve' ? 'Approve Request' : 'Reject Request'}
               </button>
             </div>
           </div>
