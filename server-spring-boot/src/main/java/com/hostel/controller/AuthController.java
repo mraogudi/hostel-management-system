@@ -51,9 +51,6 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(401)
                 .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                .body(Map.of("error", "Database error"));
         }
     }
     
@@ -88,9 +85,6 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(404)
                 .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                .body(Map.of("error", "Database error"));
         }
     }
     
@@ -118,9 +112,6 @@ public class AuthController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(400)
                 .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                .body(Map.of("error", "Failed to change password"));
         }
     }
 } 
