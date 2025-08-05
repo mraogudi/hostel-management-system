@@ -1,6 +1,5 @@
 package com.hostel.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -13,9 +12,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class JsonDataLoaderService {
@@ -26,7 +23,6 @@ public class JsonDataLoaderService {
     private final FoodMenuRepository foodMenuRepository;
     private final RoomChangeRequestRepository roomChangeRequestRepository;
     private final PersonalDetailsUpdateRequestRepository personalDetailsUpdateRequestRepository;
-    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
 
     public JsonDataLoaderService(
@@ -35,15 +31,13 @@ public class JsonDataLoaderService {
             BedRepository bedRepository,
             FoodMenuRepository foodMenuRepository,
             RoomChangeRequestRepository roomChangeRequestRepository,
-            PersonalDetailsUpdateRequestRepository personalDetailsUpdateRequestRepository,
-            PasswordEncoder passwordEncoder) {
+            PersonalDetailsUpdateRequestRepository personalDetailsUpdateRequestRepository) {
         this.userRepository = userRepository;
         this.roomRepository = roomRepository;
         this.bedRepository = bedRepository;
         this.foodMenuRepository = foodMenuRepository;
         this.roomChangeRequestRepository = roomChangeRequestRepository;
         this.personalDetailsUpdateRequestRepository = personalDetailsUpdateRequestRepository;
-        this.passwordEncoder = passwordEncoder;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -73,7 +67,6 @@ public class JsonDataLoaderService {
             
         } catch (IOException e) {
             System.err.println("❌ Error loading data from JSON: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 

@@ -4,10 +4,8 @@ import com.hostel.service.DataInitializationService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 @SpringBootApplication
-@EnableMongoAuditing
 public class HostelManagementSystemApplication implements CommandLineRunner {
 
     private final DataInitializationService initializationService;
@@ -23,7 +21,7 @@ public class HostelManagementSystemApplication implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         initializationService.initializeData();
     }
 }
