@@ -2,6 +2,8 @@ package com.hostel.service;
 
 import com.hostel.model.*;
 import com.hostel.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +12,8 @@ import java.util.List;
 
 @Service
 public class DataInitializationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializationService.class);
     
     private final UserRepository userRepository;
     
@@ -35,12 +39,12 @@ public class DataInitializationService {
     public void initializeData() {
         // Try to load from JSON first
         if (userRepository.count() == 0 && roomRepository.count() == 0) {
-            System.out.println("🔄 No existing data found. Attempting to load from database.json...");
+            logger.info("🔄 No existing data found. Attempting to load from database.json...");
             try {
                 jsonDataLoaderService.loadDataFromJson();
                 return; // If JSON loading succeeds, we're done
             } catch (Exception e) {
-                System.out.println("⚠️ JSON loading failed, falling back to default data initialization: " + e.getMessage());
+                logger.warn("⚠️ JSON loading failed, falling back to default data initialization: {}", e.getMessage());
             }
         }
         
@@ -82,7 +86,7 @@ public class DataInitializationService {
         );
         
         userRepository.save(warden);
-        System.out.println("Default warden account created");
+        logger.info("Default warden account created");
     }
     
     private void updateWardenPhone() {
@@ -90,13 +94,13 @@ public class DataInitializationService {
             if (warden.getPhone() == null || warden.getPhone().trim().isEmpty()) {
                 warden.setPhone("9876543210");
                 userRepository.save(warden);
-                System.out.println("Updated warden phone number");
+                logger.info("Updated warden phone number");
             }
         });
     }
     
     private void createSampleRoomsWithBeds() {
-        System.out.println("Creating sample rooms with beds...");
+        logger.info("Creating sample rooms with beds...");
         
         // Create rooms - specifically ensuring R007 exists with 4 beds
         List<Room> rooms = getRooms();
@@ -104,17 +108,17 @@ public class DataInitializationService {
         
         // Create beds for each room with proper status
         for (Room room : savedRooms) {
-            System.out.println("Creating beds for room " + room.getRoomNumber() + " with capacity " + room.getCapacity());
+            logger.debug("Creating beds for room {} with capacity {}", room.getRoomNumber(), room.getCapacity());
             for (int bedNumber = 1; bedNumber <= room.getCapacity(); bedNumber++) {
                 Bed bed = new Bed(room.getId(), bedNumber);
                 // Ensure bed status is explicitly set to "available"
                 bed.setStatus("available");
                 Bed savedBed = bedRepository.save(bed);
-                System.out.println("Created bed " + bedNumber + " for room " + room.getRoomNumber() + " with status: " + savedBed.getStatus());
+                logger.trace("Created bed {} for room {} with status: {}", bedNumber, room.getRoomNumber(), savedBed.getStatus());
             }
         }
         
-        System.out.println("Sample rooms and beds created successfully!");
+        logger.info("Sample rooms and beds created successfully!");
     }
 
     private static List<Room> getRooms() {
@@ -163,7 +167,7 @@ public class DataInitializationService {
         );
         
         foodMenuRepository.saveAll(menuItems);
-        System.out.println("Food menu created");
+        logger.info("Food menu created");
     }
     
     private void displayFallbackStatistics() {
@@ -172,13 +176,13 @@ public class DataInitializationService {
         long bedCount = bedRepository.count();
         long foodMenuCount = foodMenuRepository.count();
 
-        System.out.println("✅ Fallback data initialization completed!");
-        System.out.println("📊 Database statistics:");
-        System.out.println("   - Users: " + userCount);
-        System.out.println("   - Rooms: " + roomCount);
-        System.out.println("   - Beds: " + bedCount);
-        System.out.println("   - Food Menu Items: " + foodMenuCount);
-        System.out.println("\n🔐 Default Login Credentials:");
-        System.out.println("   Warden - Username: warden, Password: warden123");
+        logger.info("✅ Fallback data initialization completed!");
+        logger.info("📊 Database statistics:");
+        logger.info("   - Users: {}", userCount);
+        logger.info("   - Rooms: {}", roomCount);
+        logger.info("   - Beds: {}", bedCount);
+        logger.info("   - Food Menu Items: {}", foodMenuCount);
+        logger.info("🔐 Default Login Credentials:");
+        logger.info("   Warden - Username: warden, Password: warden123");
     }
 } 

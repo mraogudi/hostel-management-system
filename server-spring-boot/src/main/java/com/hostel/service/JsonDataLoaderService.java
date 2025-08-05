@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hostel.model.*;
 import com.hostel.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ import java.util.Map;
 
 @Service
 public class JsonDataLoaderService {
+
+    private static final Logger logger = LoggerFactory.getLogger(JsonDataLoaderService.class);
 
     private final UserRepository userRepository;
     private final RoomRepository roomRepository;
@@ -52,11 +56,11 @@ public class JsonDataLoaderService {
         try {
             ClassPathResource resource = new ClassPathResource("database.json");
             if (!resource.exists()) {
-                System.out.println("database.json not found in resources. Skipping JSON data loading.");
+                logger.info("database.json not found in resources. Skipping JSON data loading.");
                 return;
             }
 
-            System.out.println("📊 Loading database from JSON file...");
+            logger.info("📊 Loading database from JSON file...");
             
             JsonNode rootNode = objectMapper.readTree(resource.getInputStream());
             
@@ -71,8 +75,7 @@ public class JsonDataLoaderService {
             displayStatistics();
             
         } catch (IOException e) {
-            System.err.println("❌ Error loading data from JSON: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("❌ Error loading data from JSON: {}", e.getMessage(), e);
         }
     }
 
@@ -122,10 +125,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading user: " + e.getMessage());
+                logger.error("Error loading user: {}", e.getMessage());
             }
         }
-        System.out.println("   - Users: " + loaded + " loaded");
+        logger.info("   - Users: {} loaded", loaded);
     }
 
     private void loadRooms(JsonNode roomsNode) {
@@ -155,10 +158,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading room: " + e.getMessage());
+                logger.warn("Error loading room: {}", e.getMessage());
             }
         }
-        System.out.println("   - Rooms: " + loaded + " loaded");
+        logger.info("   - Rooms: {} loaded", loaded);
     }
 
     private void loadBeds(JsonNode bedsNode) {
@@ -181,10 +184,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading bed: " + e.getMessage());
+                logger.warn("Error loading bed: {}", e.getMessage());
             }
         }
-        System.out.println("   - Beds: " + loaded + " loaded");
+        logger.info("   - Beds: {} loaded", loaded);
     }
 
     private void loadFoodMenu(JsonNode foodMenuNode) {
@@ -206,10 +209,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading food menu: " + e.getMessage());
+                logger.warn("Error loading food menu: {}", e.getMessage());
             }
         }
-        System.out.println("   - Food Menu Items: " + loaded + " loaded");
+        logger.info("   - Food Menu Items: {} loaded", loaded);
     }
 
     private void loadRoomChangeRequests(JsonNode requestsNode) {
@@ -241,10 +244,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading room change request: " + e.getMessage());
+                logger.warn("Error loading room change request: {}", e.getMessage());
             }
         }
-        System.out.println("   - Room Change Requests: " + loaded + " loaded");
+        logger.info("   - Room Change Requests: {} loaded", loaded);
     }
 
     private void loadPersonalDetailsUpdateRequests(JsonNode requestsNode) {
@@ -291,10 +294,10 @@ public class JsonDataLoaderService {
                 loaded++;
                 
             } catch (Exception e) {
-                System.err.println("Error loading personal details request: " + e.getMessage());
+                logger.warn("Error loading personal details request: {}", e.getMessage());
             }
         }
-        System.out.println("   - Personal Details Requests: " + loaded + " loaded");
+        logger.info("   - Personal Details Requests: {} loaded", loaded);
     }
 
     private void displayStatistics() {
@@ -309,26 +312,26 @@ public class JsonDataLoaderService {
         long roomChangeRequestCount = roomChangeRequestRepository.count();
         long personalDetailsRequestCount = personalDetailsUpdateRequestRepository.count();
 
-        System.out.println("✅ Database loaded successfully from JSON!");
-        System.out.println("📊 Database statistics:");
-        System.out.println("   - Users: " + userCount + " (" + wardenCount + " wardens, " + studentCount + " students)");
-        System.out.println("   - Rooms: " + roomCount);
-        System.out.println("   - Beds: " + bedCount + " (" + occupiedBeds + " occupied, " + availableBeds + " available)");
-        System.out.println("   - Food Menu Items: " + foodMenuCount);
-        System.out.println("   - Room Change Requests: " + roomChangeRequestCount);
-        System.out.println("   - Personal Details Requests: " + personalDetailsRequestCount);
+        logger.info("✅ Database loaded successfully from JSON!");
+        logger.info("📊 Database statistics:");
+        logger.info("   - Users: {} ({} wardens, {} students)", userCount, wardenCount, studentCount);
+        logger.info("   - Rooms: {}", roomCount);
+        logger.info("   - Beds: {} ({} occupied, {} available)", bedCount, occupiedBeds, availableBeds);
+        logger.info("   - Food Menu Items: {}", foodMenuCount);
+        logger.info("   - Room Change Requests: {}", roomChangeRequestCount);
+        logger.info("   - Personal Details Requests: {}", personalDetailsRequestCount);
 
         // Find and display default login credentials
         userRepository.findByRole("warden").stream().findFirst().ifPresent(warden -> {
-            System.out.println("\n🔐 Default Login Credentials:");
-            System.out.println("   Warden - Username: " + warden.getUsername() + ", Password: warden123");
+            logger.info("🔐 Default Login Credentials:");
+            logger.info("   Warden - Username: {}, Password: warden123", warden.getUsername());
             
             List<User> students = userRepository.findByRole("student");
             students.stream().limit(3).forEach(student -> {
-                System.out.println("   Student - Username: " + student.getUsername() + ", Password: password123");
+                logger.info("   Student - Username: {}, Password: password123", student.getUsername());
             });
             if (students.size() > 3) {
-                System.out.println("   ... and " + (students.size() - 3) + " more students");
+                logger.info("   ... and {} more students", students.size() - 3);
             }
         });
     }
