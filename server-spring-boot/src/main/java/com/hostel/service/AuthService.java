@@ -6,7 +6,6 @@ import com.hostel.dto.UserDto;
 import com.hostel.model.User;
 import com.hostel.repository.UserRepository;
 import com.hostel.security.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,16 +13,19 @@ import java.util.Optional;
 
 @Service
 public class AuthService {
-    
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    
-    @Autowired
-    private JwtUtil jwtUtil;
-    
+
+    private final UserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    private final JwtUtil jwtUtil;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
+
     public LoginResponse authenticateUser(LoginRequest loginRequest) {
         Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
         
@@ -32,7 +34,8 @@ public class AuthService {
         }
         
         User user = userOptional.get();
-        
+String decPwd = passwordEncoder.encode("password123");
+System.out.println("Decode Pwd :: " + decPwd);
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
