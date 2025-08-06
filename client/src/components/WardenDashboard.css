@@ -3586,4 +3586,75 @@ select:disabled {
     text-align: left;
     margin-left: 0;
   }
+}
+
+/* Tooltip styles for warden comments */
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  z-index: 1000;
+  max-width: 300px;
+  min-width: 200px;
+}
+
+.tooltip-content {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9em;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  word-wrap: break-word;
+  text-align: left;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #2c3e50;
+}
+
+.warden-comments {
+  font-size: 0.85em;
+  color: #3498db;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid rgba(52, 152, 219, 0.2);
+  display: inline-block;
+}
+
+.warden-comments:hover {
+  background: rgba(52, 152, 219, 0.15);
+  border-color: rgba(52, 152, 219, 0.3);
+}
+
+/* Responsive tooltip positioning */
+@media (max-width: 768px) {
+  .tooltip {
+    max-width: 250px;
+    min-width: 180px;
+  }
+  
+  .tooltip-content {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
 } 

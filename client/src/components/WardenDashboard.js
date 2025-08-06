@@ -1623,8 +1623,23 @@ const WardenDashboard = () => {
                                   {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                                 </span>
                                 {request.warden_comments && (
-                                  <div className="warden-comments" title={request.warden_comments}>
+                                  <div 
+                                    className="warden-comments tooltip-container" 
+                                    onMouseEnter={(e) => {
+                                      const tooltip = e.target.querySelector('.tooltip');
+                                      if (tooltip) tooltip.style.display = 'block';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      const tooltip = e.target.querySelector('.tooltip');
+                                      if (tooltip) tooltip.style.display = 'none';
+                                    }}
+                                  >
                                     💬 Comments
+                                    <div className="tooltip">
+                                      <div className="tooltip-content">
+                                        {request.warden_comments}
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>
