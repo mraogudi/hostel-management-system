@@ -1,0 +1,214 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mongodb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # MongoDB doesn't support multiple writers
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hostel-management-system
+      app.kubernetes.io/component: mongodb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hostel-management-system
+        app.kubernetes.io/component: mongodb
+    spec:
+      securityContext:
+        fsGroup: 999
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: hostel-secrets
+              key: mongo-root-username
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hostel-secrets
+              key: mongo-root-password
+        - name: MONGO_INITDB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: hostel-config
+              key: MONGO_INITDB_DATABASE
+        volumeMounts:
+        - name: mongodb-data
+          mountPath: /data/db
+        - name: mongodb-init
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - mongosh
+            - --eval
+            - "db.runCommand({ping: 1})"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - mongosh
+            - --eval
+            - "db.runCommand({ping: 1})"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: mongodb-data
+        persistentVolumeClaim:
+          claimName: mongodb-pvc
+      - name: mongodb-init
+        configMap:
+          name: mongodb-init-script
+          defaultMode: 0755
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mongodb
+spec:
+  selector:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+    protocol: TCP
+    name: mongodb
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-init-script
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mongodb
+data:
+  mongo-init.js: |
+    // MongoDB initialization script for Kubernetes
+    print('Starting MongoDB initialization...');
+    
+    // Switch to hostel_management database
+    db = db.getSiblingDB('hostel_management');
+    
+    // Create collections
+    db.createCollection('users');
+    db.createCollection('rooms');
+    db.createCollection('beds');
+    db.createCollection('food_menu');
+    db.createCollection('room_change_requests');
+    db.createCollection('personal_details_requests');
+    
+    // Create indexes for better performance
+    db.users.createIndex({ "username": 1 }, { unique: true });
+    db.users.createIndex({ "email": 1 });
+    db.users.createIndex({ "role": 1 });
+    
+    db.rooms.createIndex({ "room_number": 1 }, { unique: true });
+    db.rooms.createIndex({ "floor": 1 });
+    
+    db.beds.createIndex({ "room_id": 1, "bed_number": 1 }, { unique: true });
+    db.beds.createIndex({ "student_id": 1 });
+    db.beds.createIndex({ "status": 1 });
+    
+    db.food_menu.createIndex({ "day_of_week": 1, "meal_type": 1 });
+    
+    db.room_change_requests.createIndex({ "student_id": 1 });
+    db.room_change_requests.createIndex({ "status": 1 });
+    
+    db.personal_details_requests.createIndex({ "student_id": 1 });
+    db.personal_details_requests.createIndex({ "status": 1 });
+    
+    // Insert sample data
+    print('Inserting sample data...');
+    
+    // Sample warden user
+    db.users.insertOne({
+      username: "warden",
+      password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password: warden123
+      role: "warden",
+      full_name: "Hostel Warden",
+      email: "warden@hostel.edu",
+      phone: "9876543210",
+      created_at: new Date()
+    });
+    
+    // Sample rooms
+    for (let i = 1; i <= 10; i++) {
+      const roomNumber = `R${i.toString().padStart(3, '0')}`;
+      const floor = Math.ceil(i / 4);
+      
+      db.rooms.insertOne({
+        room_number: roomNumber,
+        floor: floor,
+        capacity: 3,
+        occupied_beds: 0,
+        room_type: "standard",
+        created_at: new Date()
+      });
+    }
+    
+    // Sample beds (3 beds per room)
+    let bedCounter = 1;
+    for (let roomId = 1; roomId <= 10; roomId++) {
+      for (let bedNum = 1; bedNum <= 3; bedNum++) {
+        db.beds.insertOne({
+          room_id: roomId,
+          bed_number: bedNum,
+          student_id: null,
+          status: "available",
+          created_at: new Date()
+        });
+        bedCounter++;
+      }
+    }
+    
+    // Sample food menu
+    const menuItems = [
+      { meal_type: 'breakfast', day_of_week: 'Monday', items: 'Bread, Butter, Jam, Tea/Coffee, Boiled Eggs' },
+      { meal_type: 'lunch', day_of_week: 'Monday', items: 'Rice, Dal, Vegetable Curry, Chapati, Pickle' },
+      { meal_type: 'dinner', day_of_week: 'Monday', items: 'Rice, Sambar, Dry Vegetable, Chapati, Curd' },
+      { meal_type: 'breakfast', day_of_week: 'Tuesday', items: 'Poha, Tea/Coffee, Banana' },
+      { meal_type: 'lunch', day_of_week: 'Tuesday', items: 'Rice, Rasam, Vegetable Curry, Chapati, Papad' },
+      { meal_type: 'dinner', day_of_week: 'Tuesday', items: 'Rice, Dal, Mixed Vegetable, Chapati, Pickle' }
+    ];
+    
+    db.food_menu.insertMany(menuItems.map(item => ({
+      ...item,
+      created_at: new Date()
+    })));
+    
+    print('MongoDB initialization completed successfully!');
+    print('Default login: username=warden, password=warden123'); 

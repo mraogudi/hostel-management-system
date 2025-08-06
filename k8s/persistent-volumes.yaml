@@ -1,0 +1,73 @@
+# MongoDB Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mongodb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName will be set by cloud-specific overlays
+  # storageClassName: standard  # GKE
+  # storageClassName: gp3       # AWS EKS
+  # storageClassName: managed-premium  # Azure AKS
+
+---
+# MySQL Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  # storageClassName will be set by cloud-specific overlays
+
+---
+# Redis Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: redis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName will be set by cloud-specific overlays
+
+---
+# Backend Data Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-data-pvc
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: backend
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  # storageClassName will be set by cloud-specific overlays 

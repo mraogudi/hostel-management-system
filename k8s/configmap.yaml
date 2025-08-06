@@ -1,0 +1,186 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hostel-config
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: config
+data:
+  # Node.js Backend Configuration
+  NODE_ENV: "production"
+  PORT: "5000"
+  
+  # Database Configuration
+  MONGO_INITDB_DATABASE: "hostel_management"
+  MYSQL_DATABASE: "hostel_management"
+  MYSQL_USER: "hostel_user"
+  
+  # Application URLs (will be updated by deployment scripts)
+  REACT_APP_API_URL: "http://localhost:5000/api"
+  REACT_APP_SPRING_API_URL: "http://localhost:8080/api"
+  
+  # Spring Boot Configuration
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # MongoDB Configuration
+  MONGO_HOST: "mongodb-service"
+  MONGO_PORT: "27017"
+  
+  # MySQL Configuration
+  MYSQL_HOST: "mysql-service"
+  MYSQL_PORT: "3306"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: nginx
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log notice;
+    pid /var/run/nginx.pid;
+
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        # Logging format
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log /var/log/nginx/access.log main;
+
+        # Basic settings
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        client_max_body_size 100M;
+
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml
+            image/svg+xml;
+
+        # Upstream definitions
+        upstream frontend {
+            least_conn;
+            server frontend-service:80 max_fails=3 fail_timeout=30s;
+        }
+
+        upstream backend {
+            least_conn;
+            server backend-service:5000 max_fails=3 fail_timeout=30s;
+        }
+
+        upstream springboot_mongodb {
+            least_conn;
+            server springboot-mongodb-service:8080 max_fails=3 fail_timeout=30s;
+        }
+
+        upstream springboot_mysql {
+            least_conn;
+            server springboot-mysql-service:8080 max_fails=3 fail_timeout=30s;
+        }
+
+        # Rate limiting
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+
+        # Main server block
+        server {
+            listen 80;
+            server_name _;
+
+            # Health check endpoint
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            # Frontend application
+            location / {
+                proxy_pass http://frontend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Handle WebSocket connections
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+            }
+
+            # Node.js API endpoints
+            location /api/v1/node/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                proxy_pass http://backend/api/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Spring Boot MongoDB API endpoints
+            location /api/v1/spring-mongo/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                proxy_pass http://springboot_mongodb/api/;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Spring Boot MySQL API endpoints
+            location /api/v1/spring-mysql/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                proxy_pass http://springboot_mysql/api/;
+                proxy_set_header Host $host;
+                proxy_Set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+
+            # Static file caching
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+                expires 1y;
+                add_header Cache-Control "public, immutable";
+            }
+        }
+    } 

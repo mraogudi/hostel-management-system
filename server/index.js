@@ -187,6 +187,16 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'hostel-management-server',
+    version: '1.0.0'
+  });
+});
+
 // Routes
 
 // Login endpoint

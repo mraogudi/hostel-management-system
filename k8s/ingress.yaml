@@ -1,0 +1,293 @@
+# Nginx Load Balancer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-lb
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: nginx-lb
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hostel-management-system
+      app.kubernetes.io/component: nginx-lb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hostel-management-system
+        app.kubernetes.io/component: nginx-lb
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-config
+
+---
+# Nginx Load Balancer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-lb-service
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: nginx-lb
+  annotations:
+    # Cloud provider specific annotations
+    # AWS Load Balancer Controller
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    # GCP Load Balancer
+    cloud.google.com/load-balancer-type: "External"
+    # Azure Load Balancer
+    service.beta.kubernetes.io/azure-load-balancer-resource-group: "hostel-management-rg"
+spec:
+  selector:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: nginx-lb
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
+  type: LoadBalancer
+
+---
+# Ingress for cloud-native load balancing (alternative to nginx-lb)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hostel-ingress
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Common ingress annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    
+    # AWS ALB Ingress Controller
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    
+    # GCP GKE Ingress
+    kubernetes.io/ingress.class: "gce"
+    
+    # Azure Application Gateway Ingress Controller
+    kubernetes.io/ingress.class: "azure/application-gateway"
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  rules:
+  - host: hostel-management.local  # Change to your domain
+    http:
+      paths:
+      # Frontend routes
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-service
+            port:
+              number: 80
+      
+      # Node.js API routes
+      - path: /api/v1/node
+        pathType: Prefix
+        backend:
+          service:
+            name: backend-service
+            port:
+              number: 5000
+      
+      # Spring Boot MongoDB API routes
+      - path: /api/v1/spring-mongo
+        pathType: Prefix
+        backend:
+          service:
+            name: springboot-mongodb-service
+            port:
+              number: 8080
+      
+      # Spring Boot MySQL API routes
+      - path: /api/v1/spring-mysql
+        pathType: Prefix
+        backend:
+          service:
+            name: springboot-mysql-service
+            port:
+              number: 8080
+  
+  # TLS configuration (uncomment and configure for HTTPS)
+  # tls:
+  # - hosts:
+  #   - hostel-management.local
+  #   secretName: hostel-tls-secret
+
+---
+# Horizontal Pod Autoscaler for applications
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: springboot-mongodb-hpa
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: springboot-mongodb
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: springboot-mongodb
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: springboot-mysql-hpa
+  namespace: hostel-management
+  labels:
+    app.kubernetes.io/name: hostel-management-system
+    app.kubernetes.io/component: springboot-mysql
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: springboot-mysql
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80 

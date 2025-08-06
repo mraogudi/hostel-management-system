@@ -1,0 +1,79 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and modify the values
+
+# Cloud provider selection (required)
+cloud_provider = "aws"  # Options: "aws", "gcp", "azure"
+
+# Environment configuration
+environment = "prod"    # Options: "dev", "staging", "prod"
+project_name = "hostel-management"
+
+# Infrastructure configuration
+region = "us-west-2"    # Cloud-specific regions:
+                        # AWS: us-west-2, us-east-1, eu-west-1
+                        # GCP: us-central1, europe-west1, asia-east1
+                        # Azure: East US, West Europe, Southeast Asia
+
+# Cluster configuration
+cluster_name = ""       # Auto-generated if empty
+node_count = 3
+node_instance_type = "" # Auto-selected if empty:
+                        # AWS: t3.medium, t3.large, m5.large
+                        # GCP: e2-standard-2, n1-standard-2, n2-standard-2
+                        # Azure: Standard_B2s, Standard_D2s_v3, Standard_DS2_v2
+
+# Auto-scaling configuration
+enable_auto_scaling = true
+min_node_count = 2
+max_node_count = 10
+
+# Storage configuration
+disk_size = 100         # GB
+
+# Kubernetes configuration
+kubernetes_version = "1.28"
+
+# Example configurations for different environments:
+
+## Development Environment
+# cloud_provider = "aws"
+# environment = "dev"
+# project_name = "hostel-dev"
+# region = "us-west-2"
+# node_count = 2
+# enable_auto_scaling = false
+# disk_size = 50
+
+## Staging Environment
+# cloud_provider = "gcp"
+# environment = "staging"
+# project_name = "hostel-staging"
+# region = "us-central1"
+# node_count = 3
+# enable_auto_scaling = true
+# min_node_count = 2
+# max_node_count = 6
+
+## Production Environment (AWS)
+# cloud_provider = "aws"
+# environment = "prod"
+# project_name = "hostel-prod"
+# region = "us-west-2"
+# node_count = 5
+# node_instance_type = "t3.large"
+# enable_auto_scaling = true
+# min_node_count = 3
+# max_node_count = 15
+# disk_size = 200
+
+## Production Environment (Azure)
+# cloud_provider = "azure"
+# environment = "prod"
+# project_name = "hostel-prod"
+# region = "East US"
+# node_count = 5
+# node_instance_type = "Standard_D2s_v3"
+# enable_auto_scaling = true
+# min_node_count = 3
+# max_node_count = 15
+# disk_size = 200 

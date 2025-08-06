@@ -1,0 +1,53 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: hostel-management-development
+  namespace: hostel-management-dev
+
+# Base configuration
+bases:
+  - ../../
+
+# Override namespace for development
+namespace: hostel-management-dev
+
+# Development-specific labels
+commonLabels:
+  environment: development
+  
+# Reduced replica counts for development
+replicas:
+  - name: frontend
+    count: 1
+  - name: backend
+    count: 1
+  - name: springboot-mongodb
+    count: 1
+  - name: springboot-mysql
+    count: 1
+
+# Development-specific patches
+patchesStrategicMerge:
+  - patches/resource-limits.yaml
+  - patches/development-config.yaml
+
+# Development configuration
+configMapGenerator:
+  - name: hostel-config
+    behavior: merge
+    literals:
+      - NODE_ENV=development
+      - SPRING_PROFILES_ACTIVE=development
+      - LOG_LEVEL=debug
+
+# Use development images
+images:
+  - name: ghcr.io/hostel-management-system-frontend
+    newTag: dev
+  - name: ghcr.io/hostel-management-system-backend
+    newTag: dev
+  - name: ghcr.io/hostel-management-system-springboot-mongodb
+    newTag: dev
+  - name: ghcr.io/hostel-management-system-springboot-mysql
+    newTag: dev 

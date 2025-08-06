@@ -1,0 +1,57 @@
+# Production-specific configuration
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  template:
+    spec:
+      containers:
+      - name: backend
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: ENABLE_METRICS
+          value: "true"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-mongodb
+spec:
+  template:
+    spec:
+      containers:
+      - name: springboot-mongodb
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        - name: LOGGING_LEVEL_COM_HOSTEL
+          value: "INFO"
+        - name: SPRING_JPA_SHOW_SQL
+          value: "false"
+        - name: MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED
+          value: "true"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springboot-mysql
+spec:
+  template:
+    spec:
+      containers:
+      - name: springboot-mysql
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        - name: LOGGING_LEVEL_COM_HOSTEL
+          value: "INFO"
+        - name: SPRING_JPA_SHOW_SQL
+          value: "false"
+        - name: MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED
+          value: "true" 

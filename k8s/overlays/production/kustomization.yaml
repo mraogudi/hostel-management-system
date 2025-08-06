@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: hostel-management-production
+  namespace: hostel-management
+
+# Base configuration
+bases:
+  - ../../
+
+# Production-specific labels
+commonLabels:
+  environment: production
+
+# Production replica counts
+replicas:
+  - name: frontend
+    count: 5
+  - name: backend
+    count: 3
+  - name: springboot-mongodb
+    count: 3
+  - name: springboot-mysql
+    count: 3
+
+# Production-specific patches
+patchesStrategicMerge:
+  - patches/resource-limits.yaml
+  - patches/production-config.yaml
+  - patches/security-context.yaml
+
+# Production configuration
+configMapGenerator:
+  - name: hostel-config
+    behavior: merge
+    literals:
+      - NODE_ENV=production
+      - SPRING_PROFILES_ACTIVE=production
+      - LOG_LEVEL=info
+
+# Use production images with specific tags
+images:
+  - name: ghcr.io/hostel-management-system-frontend
+    newTag: v1.0.0
+  - name: ghcr.io/hostel-management-system-backend
+    newTag: v1.0.0
+  - name: ghcr.io/hostel-management-system-springboot-mongodb
+    newTag: v1.0.0
+  - name: ghcr.io/hostel-management-system-springboot-mysql
+    newTag: v1.0.0 

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Development overrides
+  frontend:
+    build:
+      target: builder
+    command: npm start
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:5000/api
+
+  backend:
+    command: npm run dev
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+
+  springboot-mongodb:
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+    volumes:
+      - ./server-spring-boot/src:/app/src
+
+  springboot-mysql:
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+    volumes:
+      - ./server-spring-boot-mysql/src:/app/src 

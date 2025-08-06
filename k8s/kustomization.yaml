@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: hostel-management-system
+  namespace: hostel-management
+
+# Namespace configuration
+namespace: hostel-management
+
+# Core infrastructure resources
+resources:
+  # Namespace and basic configuration
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - persistent-volumes.yaml
+  
+  # Database deployments
+  - mongodb.yaml
+  - mysql.yaml
+  - redis.yaml
+  
+  # Application deployments
+  - apps/frontend/deployment.yaml
+  - apps/frontend/service.yaml
+  - apps/frontend/hpa.yaml
+  
+  - apps/backend/deployment.yaml
+  - apps/backend/service.yaml
+  - apps/backend/hpa.yaml
+  - apps/backend/pvc.yaml
+  
+  - apps/springboot-mongodb/deployment.yaml
+  - apps/springboot-mongodb/service.yaml
+  - apps/springboot-mongodb/hpa.yaml
+  
+  - apps/springboot-mysql/deployment.yaml
+  - apps/springboot-mysql/service.yaml
+  - apps/springboot-mysql/hpa.yaml
+  
+  # Ingress and load balancer
+  - ingress.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: hostel-management-system
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+# Images that can be customized
+images:
+  - name: ghcr.io/hostel-management-system-frontend
+    newTag: latest
+  - name: ghcr.io/hostel-management-system-backend
+    newTag: latest
+  - name: ghcr.io/hostel-management-system-springboot-mongodb
+    newTag: latest
+  - name: ghcr.io/hostel-management-system-springboot-mysql
+    newTag: latest
+
+# Patches for different environments (can be overridden)
+patchesStrategicMerge: []
+
+# Configuration options
+configMapGenerator: []
+secretGenerator: []
+
+# Replica count patches (can be customized per environment)
+replicas:
+  - name: frontend
+    count: 3
+  - name: backend
+    count: 2
+  - name: springboot-mongodb
+    count: 2
+  - name: springboot-mysql
+    count: 2 
