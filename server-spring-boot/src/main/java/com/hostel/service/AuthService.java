@@ -34,8 +34,7 @@ public class AuthService {
         }
         
         User user = userOptional.get();
-String decPwd = passwordEncoder.encode("password123");
-System.out.println("Decode Pwd :: " + decPwd);
+
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
         }
